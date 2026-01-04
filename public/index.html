@@ -509,9 +509,11 @@
     .chart-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
     .chart-title{font-size:14px;font-weight:900;line-height:1.3}
     .chart-subtitle{font-size:11px;color:var(--text3);font-weight:700;line-height:1.4}
-    .chart-container{position:relative;height:300px;width:100%;min-height:250px}
-    .chart-container.tall{height:380px}
+    .chart-container{position:relative;height:300px;width:100%;min-height:250px;max-width:100%;overflow:hidden}
+    .chart-container canvas{max-width:100%!important;max-height:100%!important}
+    .chart-container.tall{height:400px;min-height:350px}
     .chart-container.small{height:240px}
+    .chart-container.horizontal{height:auto;min-height:300px;max-height:500px}
 
     .table-card{
       background:var(--bg-card);
@@ -600,13 +602,14 @@
       .metric{padding:10px}
       .metric-value{font-size:22px}
       .metric-label{font-size:10px}
-      .chart-container{height:280px}
-      .chart-container.tall{height:340px}
+      .chart-container{height:280px;min-height:250px}
+      .chart-container.tall{height:350px;min-height:300px}
       .chart-title{font-size:13px}
       .chart-subtitle{font-size:10px}
       table{font-size:11px}
       th,td{padding:6px 8px}
       .data-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .charts-grid{gap:10px}
     }
     @media(max-width:480px){
       .app{padding:10px}
@@ -948,7 +951,7 @@
               <div class="chart-subtitle">лиды / звонки / подтвержденные</div>
             </div>
           </div>
-          <div class="chart-container tall"><canvas id="chartSourcesTop"></canvas></div>
+          <div class="chart-container tall" style="height:450px"><canvas id="chartSourcesTop"></canvas></div>
         </div>
       </div>
 
@@ -1096,7 +1099,7 @@
               <div class="chart-subtitle">utm_campaign — какие кампании приносят больше заявок</div>
             </div>
           </div>
-          <div class="chart-container tall"><canvas id="chartTopCampaignsLeads"></canvas></div>
+          <div class="chart-container tall" style="height:450px"><canvas id="chartTopCampaignsLeads"></canvas></div>
         </div>
 
         <div class="chart-card full">
@@ -1106,7 +1109,7 @@
               <div class="chart-subtitle">Какие кампании генерируют больше звонков</div>
             </div>
           </div>
-          <div class="chart-container tall"><canvas id="chartTopCampaignsCalls"></canvas></div>
+          <div class="chart-container tall" style="height:450px"><canvas id="chartTopCampaignsCalls"></canvas></div>
         </div>
 
         <div class="chart-card">
@@ -1116,7 +1119,7 @@
               <div class="chart-subtitle">% подтверждённых от звонков</div>
             </div>
           </div>
-          <div class="chart-container"><canvas id="chartCampaignEfficiency"></canvas></div>
+          <div class="chart-container tall" style="height:400px"><canvas id="chartCampaignEfficiency"></canvas></div>
         </div>
 
         <div class="chart-card">
