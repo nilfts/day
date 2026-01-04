@@ -1,0 +1,4931 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Евгенич — Маркетинговая аналитика (Лиды + Звонки)</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- Heatmap (matrix) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    :root{
+      --bg:#0a0a0f;
+      --bg-card:#12121a;
+      --bg-hover:#1a1a24;
+      --border:#2a2a35;
+      --accent:#ff6b35;
+      --accent2:#3b82f6;
+      --green:#10b981;
+      --red:#ef4444;
+      --purple:#8b5cf6;
+      --yellow:#f59e0b;
+      --pink:#ec4899;
+      --text:#fff;
+      --text2:#a0a0b0;
+      --text3:#606070;
+    }
+
+    body{
+      font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      text-rendering:optimizeLegibility;
+      letter-spacing:-0.01em;
+      font-feature-settings:'kern' 1,'liga' 1,'calt' 1,'tnum' 1;
+    }
+    .app{
+      max-width:100%;
+      margin:0;
+      padding:16px;
+      overflow-x:hidden;
+      box-sizing:border-box;
+    }
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--border);
+      gap:12px;flex-wrap:wrap;
+    }
+    .logo{
+      font-size:18px;font-weight:800;
+      background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      letter-spacing:.2px;
+      text-shadow:0 0 20px rgba(255,107,53,.3);
+    }
+    .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .status{
+      display:flex;align-items:center;gap:8px;
+      padding:6px 14px;border-radius:999px;border:1px solid var(--border);
+      background:var(--bg-card);font-size:12px;color:var(--text2);
+      animation:fadeIn .5s ease-out;
+    }
+    .status-dot{
+      width:8px;height:8px;border-radius:50%;background:var(--green);
+      animation:pulse 2s ease-in-out infinite;
+      box-shadow:0 0 8px currentColor;
+    }
+    .status-dot.loading{background:var(--yellow);animation:pulse 1s ease-in-out infinite}
+    .status-dot.error{background:var(--red);animation:pulse .5s ease-in-out infinite}
+
+    .btn{
+      padding:8px 14px;border-radius:8px;border:1px solid var(--border);
+      background:var(--bg-card);color:var(--text);cursor:pointer;
+      font-size:12px;font-weight:600;transition:all .2s ease-out;
+      position:relative;overflow:hidden;
+    }
+    .btn::before{
+      content:'';
+      position:absolute;
+      top:50%;left:50%;
+      width:0;height:0;
+      border-radius:50%;
+      background:rgba(255,255,255,.1);
+      transform:translate(-50%, -50%);
+      transition:width .4s, height .4s;
+    }
+    .btn:hover::before{
+      width:300px;height:300px;
+    }
+    .btn:hover{
+      border-color:var(--accent);
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(0,0,0,.3);
+    }
+    .btn:active{transform:translateY(0)}
+    .btn-accent{
+      background:linear-gradient(135deg, var(--accent) 0%, rgba(255,107,53,.8) 100%);
+      border-color:var(--accent);
+      box-shadow:0 2px 8px rgba(255,107,53,.3);
+    }
+    .btn-accent:hover{
+      filter:brightness(1.1);
+      box-shadow:0 4px 16px rgba(255,107,53,.5);
+    }
+
+    .loader{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:60px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);
+    }
+    .spinner{
+      width:42px;height:42px;border-radius:50%;
+      border:3px solid var(--border);border-top-color:var(--accent);
+      animation:spin .8s linear infinite;margin-bottom:14px;
+      box-shadow:0 0 16px rgba(255,107,53,.3);
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .dashboard{display:none}
+    .dashboard.visible{display:block}
+
+    .controls,.filters,.card{
+      background:linear-gradient(145deg, var(--bg-card) 0%, rgba(18,18,26,.8) 100%);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      margin-bottom:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .controls::before,.filters::before{
+      content:'';
+      position:absolute;
+      top:-2px;left:20px;right:20px;
+      height:2px;
+      background:linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+      opacity:.4;
+    }
+    .controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+    .control-group{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto;max-width:100%}
+    .control-label{
+      font-size:11px;color:var(--text2);font-weight:800;letter-spacing:.6px;text-transform:uppercase
+    }
+    .date-inputs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .date-input{
+      padding:8px 12px;border-radius:8px;border:1px solid var(--border);
+      background:var(--bg);color:var(--text);
+      font-size:12px;font-family:inherit;
+      outline:none;min-width:140px;
+    }
+    .date-input:focus{border-color:var(--accent)}
+    .quick-periods{display:flex;gap:6px;flex-wrap:wrap;max-width:100%}
+    .period-btn{
+      padding:6px 12px;border-radius:7px;border:1px solid var(--border);
+      background:var(--bg);color:var(--text2);
+      cursor:pointer;font-size:11px;font-weight:700;transition:.15s;white-space:nowrap;
+    }
+    .period-btn:hover{color:var(--text);border-color:var(--accent);background:rgba(255,107,53,.1)}
+    .period-btn.active{
+      background:linear-gradient(135deg, var(--accent) 0%, rgba(255,107,53,.8) 100%);
+      border-color:var(--accent);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(255,107,53,.3);
+      transform:scale(1.05);
+    }
+
+    .compare-toggle{
+      display:flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:10px;
+      border:1px solid var(--border);background:var(--bg);
+      cursor:pointer;font-size:12px;font-weight:700;color:var(--text2);
+      transition:all .2s ease-out;
+    }
+    .compare-toggle:hover{
+      border-color:var(--accent2);
+      background:rgba(59,130,246,.05);
+    }
+    .compare-toggle.active{
+      background:linear-gradient(135deg, rgba(59,130,246,.25) 0%, rgba(59,130,246,.15) 100%);
+      border-color:var(--accent2);
+      color:var(--text);
+      box-shadow:0 2px 8px rgba(59,130,246,.3);
+    }
+    .compare-toggle input{display:none}
+    .compare-dates{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .compare-dates.visible{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+
+    /* Month calendar picker */
+    .month-picker{
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:14px;
+    }
+    .month-picker-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+    }
+    .month-picker-title{
+      font-size:13px;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .month-picker-nav{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .month-picker-nav button{
+      padding:6px 12px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      background:var(--bg);
+      color:var(--text);
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+      transition:.2s;
+    }
+    .month-picker-nav button:hover{
+      border-color:var(--accent);
+      background:rgba(255,107,53,.1);
+    }
+    .month-picker-year{
+      font-size:14px;
+      font-weight:900;
+      color:var(--text);
+      min-width:50px;
+      text-align:center;
+    }
+    .months-grid{
+      display:grid;
+      grid-template-columns:repeat(6, 1fr);
+      gap:6px;
+    }
+    @media(max-width:600px){
+      .months-grid{grid-template-columns:repeat(4, 1fr)}
+    }
+    @media(max-width:400px){
+      .months-grid{grid-template-columns:repeat(3, 1fr)}
+    }
+    .month-btn{
+      padding:10px 8px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--bg);
+      color:var(--text2);
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+      text-align:center;
+      transition:all .2s;
+    }
+    .month-btn:hover{
+      border-color:var(--accent);
+      color:var(--text);
+      background:rgba(255,107,53,.08);
+    }
+    .month-btn.selected{
+      background:linear-gradient(135deg, var(--accent) 0%, rgba(255,107,53,.8) 100%);
+      border-color:var(--accent);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(255,107,53,.4);
+    }
+    .month-btn.in-range{
+      background:rgba(255,107,53,.15);
+      border-color:rgba(255,107,53,.4);
+      color:var(--text);
+    }
+    .month-btn.disabled{
+      opacity:.3;
+      cursor:not-allowed;
+    }
+    .month-picker-actions{
+      display:flex;
+      gap:8px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+    .quick-range-btn{
+      padding:6px 12px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      background:var(--bg);
+      color:var(--text2);
+      cursor:pointer;
+      font-weight:700;
+      font-size:11px;
+      transition:.2s;
+    }
+    .quick-range-btn:hover{
+      border-color:var(--accent2);
+      color:var(--text);
+      background:rgba(59,130,246,.1);
+    }
+    .quick-range-btn.active{
+      background:linear-gradient(135deg, var(--accent2) 0%, rgba(59,130,246,.8) 100%);
+      border-color:var(--accent2);
+      color:#fff;
+    }
+
+    .filters-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .filters-title{font-size:13px;font-weight:800}
+    .filters-toggle{font-size:12px;color:var(--text2);cursor:pointer;font-weight:700}
+    .filters-toggle:hover{color:var(--accent)}
+    .filters-content{display:none;margin-top:12px}
+    .filters-content.visible{display:block}
+    .filters-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:10px;
+    }
+    .filter-section{
+      background:linear-gradient(145deg, var(--bg) 0%, rgba(10,10,15,.8) 100%);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px;
+      transition:all .2s ease-out;
+    }
+    .filter-section:hover{
+      border-color:rgba(255,107,53,.3);
+      box-shadow:0 2px 12px rgba(0,0,0,.3);
+    }
+    .filter-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .filter-section-title{font-size:11px;font-weight:900;color:var(--text2);letter-spacing:.5px;text-transform:uppercase}
+    .filter-actions{display:flex;gap:10px}
+    .filter-action{font-size:11px;color:var(--accent);cursor:pointer;font-weight:800}
+    .filter-options{max-height:170px;overflow:auto;padding-right:4px}
+    .filter-option{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;color:var(--text2)}
+    .filter-option:hover{color:var(--text)}
+    .filter-option input{accent-color:var(--accent)}
+    .filter-option-count{margin-left:auto;font-size:11px;color:var(--text3);font-weight:800}
+
+    .data-tabs{
+      display:flex;gap:4px;background:var(--bg-card);border:1px solid var(--border);
+      border-radius:12px;padding:4px;width:100%;max-width:fit-content;margin-bottom:14px;flex-wrap:wrap;overflow-x:auto;
+    }
+    .data-tab{
+      padding:8px 14px;border-radius:10px;border:none;background:transparent;
+      color:var(--text2);cursor:pointer;font-weight:900;font-size:12px;transition:all .2s ease-out;white-space:nowrap;
+      position:relative;
+    }
+    .data-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}
+    .data-tab.active{
+      background:linear-gradient(135deg, var(--accent) 0%, rgba(255,107,53,.8) 100%);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(255,107,53,.4);
+      transform:scale(1.02);
+    }
+    .count{
+      display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;
+      background:rgba(255,255,255,.15);font-size:11px;font-weight:900;
+    }
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+
+    .metrics{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:10px;margin-bottom:14px;
+    }
+    .metric{
+      background:linear-gradient(145deg, var(--bg-card) 0%, rgba(18,18,26,.8) 100%);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      position:relative;
+      overflow:hidden;
+      min-width:0;
+      transition:all .2s ease-out;
+    }
+    .metric::before{
+      content:'';
+      position:absolute;
+      top:0;right:0;
+      width:60px;height:60px;
+      background:radial-gradient(circle at center, rgba(255,107,53,.08) 0%, transparent 70%);
+      pointer-events:none;
+    }
+    .metric-label{font-size:11px;color:var(--text2);font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.3}
+    .metric-value{font-size:26px;font-weight:900;line-height:1;margin-top:8px;word-break:break-word}
+    .metric-value.accent{color:var(--accent)}
+    .metric-value.green{color:var(--green)}
+    .metric-value.blue{color:var(--accent2)}
+    .metric-value.purple{color:var(--purple)}
+    .metric-value.yellow{color:var(--yellow)}
+    .metric-value.pink{color:var(--pink)}
+    .metric-sub{margin-top:8px;font-size:12px;color:var(--text3);font-weight:700}
+    .metric-change{
+      margin-top:8px;display:inline-flex;align-items:center;gap:6px;
+      padding:4px 10px;border-radius:8px;font-size:12px;font-weight:900;
+      animation:slideIn .4s ease-out;
+      border:1px solid transparent;
+    }
+    .metric-change.up{
+      background:linear-gradient(135deg, rgba(16,185,129,.18) 0%, rgba(16,185,129,.08) 100%);
+      color:var(--green);
+      border-color:rgba(16,185,129,.3);
+      box-shadow:0 2px 8px rgba(16,185,129,.15);
+    }
+    .metric-change.down{
+      background:linear-gradient(135deg, rgba(239,68,68,.18) 0%, rgba(239,68,68,.08) 100%);
+      color:var(--red);
+      border-color:rgba(239,68,68,.3);
+      box-shadow:0 2px 8px rgba(239,68,68,.15);
+    }
+    .metric-change.neutral{background:rgba(160,160,176,.14);color:var(--text2)}
+    .metric-change::before{
+      content:'';
+      display:inline-block;
+      width:0;
+      height:0;
+      border-style:solid;
+    }
+    .metric-change.up::before{
+      border-width:0 4px 6px 4px;
+      border-color:transparent transparent var(--green) transparent;
+    }
+    .metric-change.down::before{
+      border-width:6px 4px 0 4px;
+      border-color:var(--red) transparent transparent transparent;
+    }
+
+    .charts-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(100%, 500px),1fr));
+      gap:14px;margin-bottom:14px;
+    }
+    .chart-card{
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      min-width:0;
+      overflow:hidden;
+    }
+    .chart-card.full{grid-column:1/-1}
+    .chart-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+    .chart-title{font-size:14px;font-weight:900;line-height:1.3}
+    .chart-subtitle{font-size:11px;color:var(--text3);font-weight:700;line-height:1.4}
+    .chart-container{position:relative;height:300px;width:100%;min-height:250px}
+    .chart-container.tall{height:380px}
+    .chart-container.small{height:240px}
+
+    .table-card{
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:14px;
+      overflow:hidden;
+    }
+    .table-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+    .table-title{font-size:14px;font-weight:900;line-height:1.3}
+    .table-container{overflow-x:auto;overflow-y:auto;max-height:500px;border-radius:12px;-webkit-overflow-scrolling:touch}
+    table{width:100%;border-collapse:collapse;min-width:600px}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap}
+    th{
+      position:sticky;top:0;background:linear-gradient(180deg, var(--bg) 0%, rgba(10,10,15,.95) 100%);
+      color:var(--text2);font-weight:900;font-size:11px;letter-spacing:.5px;text-transform:uppercase;
+      cursor:pointer;z-index:10;
+      border-bottom:2px solid var(--accent);
+      transition:color .2s ease-out;
+    }
+    th:hover{color:var(--accent)}
+    tr{transition:all .15s ease-out}
+    tr:hover td{
+      background:linear-gradient(90deg, rgba(255,107,53,.05) 0%, transparent 100%);
+      border-color:rgba(255,107,53,.2);
+    }
+    tbody tr:nth-child(odd){background:rgba(255,255,255,.01)}
+    .badge{
+      display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;
+      border:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+    .badge-orange{background:linear-gradient(135deg, rgba(255,107,53,.2) 0%, rgba(255,107,53,.1) 100%);color:var(--accent);border-color:rgba(255,107,53,.4)}
+    .badge-green{background:linear-gradient(135deg, rgba(16,185,129,.2) 0%, rgba(16,185,129,.1) 100%);color:var(--green);border-color:rgba(16,185,129,.4)}
+    .badge-blue{background:linear-gradient(135deg, rgba(59,130,246,.2) 0%, rgba(59,130,246,.1) 100%);color:var(--accent2);border-color:rgba(59,130,246,.4)}
+    .badge-purple{background:linear-gradient(135deg, rgba(139,92,246,.2) 0%, rgba(139,92,246,.1) 100%);color:var(--purple);border-color:rgba(139,92,246,.4)}
+    .badge-yellow{background:linear-gradient(135deg, rgba(245,158,11,.2) 0%, rgba(245,158,11,.1) 100%);color:var(--yellow);border-color:rgba(245,158,11,.4)}
+    .badge-red{background:linear-gradient(135deg, rgba(239,68,68,.2) 0%, rgba(239,68,68,.1) 100%);color:var(--red);border-color:rgba(239,68,68,.4)}
+
+    .progress-bar{
+      height:8px;background:var(--bg);
+      border-radius:999px;overflow:hidden;min-width:60px;max-width:100%;border:1px solid var(--border);
+      box-shadow:inset 0 1px 3px rgba(0,0,0,.3);
+    }
+    .progress-fill{
+      height:100%;border-radius:999px;
+      background:linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
+      animation:progressFill .8s ease-out;
+      box-shadow:0 0 8px rgba(255,107,53,.4);
+    }
+    @keyframes progressFill{
+      from{width:0}
+    }
+
+    /* Tooltips */
+    .info-icon{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:18px;height:18px;border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--text2);
+      font-size:12px;font-weight:900;
+      cursor:pointer;user-select:none;
+    }
+    .info-icon:hover{border-color:var(--accent);color:var(--accent)}
+    .tooltip-bubble{
+      position:fixed;z-index:9999;max-width:360px;
+      padding:10px 12px;border-radius:12px;
+      background:rgba(18,18,26,.98);
+      border:1px solid var(--border);
+      box-shadow:0 10px 32px rgba(0,0,0,.40);
+      display:none;
+    }
+    .tooltip-bubble .t-title{font-weight:900;margin-bottom:6px;color:var(--text);font-size:13px}
+    .tooltip-bubble .t-text{color:var(--text2);font-size:12px;line-height:1.35;font-weight:650}
+
+    /* responsive */
+    @media(max-width:1200px){
+      .charts-grid{grid-template-columns:1fr}
+      .metrics{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+    }
+    @media(max-width:820px){
+      .app{padding:12px}
+      .header{flex-direction:column;align-items:flex-start;gap:10px}
+      .logo{font-size:16px}
+      .header-right{width:100%;justify-content:flex-start}
+      .metric{padding:10px}
+      .metric-value{font-size:22px}
+      .metric-label{font-size:10px}
+      .chart-container{height:280px}
+      .chart-container.tall{height:340px}
+      .chart-title{font-size:13px}
+      .chart-subtitle{font-size:10px}
+      table{font-size:11px}
+      th,td{padding:6px 8px}
+      .data-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    }
+    @media(max-width:480px){
+      .app{padding:10px}
+      .metrics{grid-template-columns:1fr;gap:8px}
+      .data-tabs{width:100%;overflow-x:auto}
+      .filters-grid{grid-template-columns:1fr}
+      .controls-row{flex-direction:column;align-items:stretch}
+      .quick-periods{justify-content:flex-start}
+    }
+
+    /* animations */
+    @keyframes slideIn{
+      from{opacity:0;transform:translateY(-10px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    @keyframes fadeIn{
+      from{opacity:0}
+      to{opacity:1}
+    }
+    @keyframes pulse{
+      0%, 100%{opacity:1}
+      50%{opacity:.7}
+    }
+    
+    .metric{animation:fadeIn .5s ease-out}
+    .chart-card{animation:fadeIn .6s ease-out}
+    .table-card{animation:fadeIn .7s ease-out}
+    
+    .metric:hover{
+      transform:translateY(-2px);
+      transition:transform .2s ease-out;
+      box-shadow:0 4px 16px rgba(0,0,0,.4);
+    }
+    
+    .chart-card:hover{
+      border-color:rgba(255,107,53,.4);
+      transition:border-color .2s ease-out;
+    }
+    
+    /* scrollbar */
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="logo">Евгенич — Маркетинговая аналитика</div>
+    <div class="header-right">
+      <div class="status">
+        <div class="status-dot loading" id="statusDot"></div>
+        <span id="statusText">Загрузка…</span>
+      </div>
+      <button class="btn" onclick="loadAllData()">Обновить</button>
+      <button class="btn" onclick="exportData()">Экспорт CSV</button>
+      <button class="btn btn-accent" onclick="resetFilters()">Сбросить фильтры</button>
+    </div>
+  </header>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <div id="loaderText" style="color:var(--text2);font-weight:800">Загружаем данные…</div>
+    <div style="margin-top:8px;color:var(--text3);font-size:12px;font-weight:700;max-width:740px;text-align:center">
+      Источник данных: API сервер → Google Sheets. Данные кэшируются для быстродействия.
+    </div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+
+    <!-- period -->
+    <div class="controls">
+      <div class="controls-row">
+        <div class="control-group">
+          <div class="control-label">Период</div>
+          <div class="date-inputs">
+            <input type="date" class="date-input" id="dateFrom">
+            <span style="color:var(--text3);font-weight:900">—</span>
+            <input type="date" class="date-input" id="dateTo">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Быстрый выбор</div>
+          <div class="quick-periods">
+            <button class="period-btn" data-period="today">Сегодня</button>
+            <button class="period-btn" data-period="yesterday">Вчера</button>
+            <button class="period-btn" data-period="7days">7 дней</button>
+            <button class="period-btn" data-period="30days">30 дней</button>
+            <button class="period-btn" data-period="thisMonth">Этот месяц</button>
+            <button class="period-btn" data-period="lastMonth">Прошлый месяц</button>
+            <button class="period-btn" data-period="q1">Q1</button>
+            <button class="period-btn" data-period="q2">Q2</button>
+            <button class="period-btn" data-period="q3">Q3</button>
+            <button class="period-btn" data-period="q4">Q4</button>
+            <button class="period-btn" data-period="thisYear">Этот год</button>
+            <button class="period-btn active" data-period="all">Все время</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Сравнение периодов</div>
+          <label class="compare-toggle" id="compareToggle">
+            <input type="checkbox" id="compareEnabled">
+            <span style="font-weight:900">Включить сравнение</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="compare-dates" id="compareDates">
+        <div class="control-group">
+          <div class="control-label">Сравнить с периодом</div>
+          <div class="date-inputs">
+            <input type="date" class="date-input" id="compareDateFrom">
+            <span style="color:var(--text3);font-weight:900">—</span>
+            <input type="date" class="date-input" id="compareDateTo">
+          </div>
+        </div>
+        <div class="control-group">
+          <div class="control-label">Или выбрать</div>
+          <div class="quick-periods">
+            <button class="period-btn" data-compare="prevPeriod">Предыдущий период</button>
+            <button class="period-btn" data-compare="prevMonth">Прошлый месяц</button>
+            <button class="period-btn" data-compare="prevYear">Год назад</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- filters -->
+    <div class="filters">
+    <!-- Month Calendar Picker -->
+    <div class="month-picker">
+      <div class="month-picker-header">
+        <div class="month-picker-title">
+          📅 Выбор по месяцам
+          <span style="font-weight:500;font-size:11px;color:var(--text3)">(кликните для выбора диапазона)</span>
+        </div>
+        <div class="month-picker-nav">
+          <button onclick="changePickerYear(-1)">◀</button>
+          <span class="month-picker-year" id="pickerYear">2025</span>
+          <button onclick="changePickerYear(1)">▶</button>
+        </div>
+      </div>
+      <div class="months-grid" id="monthsGrid"></div>
+      <div class="month-picker-actions">
+        <button class="quick-range-btn" onclick="selectMonthRange('q1')">Q1 (Янв-Мар)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('q2')">Q2 (Апр-Июн)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('q3')">Q3 (Июл-Сен)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('q4')">Q4 (Окт-Дек)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('h1')">H1 (1-е полугодие)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('h2')">H2 (2-е полугодие)</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('year')">Весь год</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('last3')">Последние 3 мес</button>
+        <button class="quick-range-btn" onclick="selectMonthRange('last6')">Последние 6 мес</button>
+      </div>
+    </div>
+
+    <!-- filters -->
+    <div class="filters">
+      <div class="filters-header">
+        <div class="filters-title">Фильтры</div>
+        <div class="filters-toggle" id="filtersToggle">Показать фильтры</div>
+      </div>
+
+      <div class="filters-content" id="filtersContent">
+        <div class="filters-grid">
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Источники (utm_source)</div>
+              <div class="filter-actions">
+                <span class="filter-action" onclick="selectAll('#sourcesFilter')">Все</span>
+                <span class="filter-action" onclick="clearAll('#sourcesFilter')">Сбросить</span>
+              </div>
+            </div>
+            <div class="filter-options" id="sourcesFilter"></div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Каналы (utm_medium/Канал)</div>
+              <div class="filter-actions">
+                <span class="filter-action" onclick="selectAll('#mediumFilter')">Все</span>
+                <span class="filter-action" onclick="clearAll('#mediumFilter')">Сбросить</span>
+              </div>
+            </div>
+            <div class="filter-options" id="mediumFilter"></div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Локации лидов (place)</div>
+              <div class="filter-actions">
+                <span class="filter-action" onclick="selectAll('#placeFilter')">Все</span>
+                <span class="filter-action" onclick="clearAll('#placeFilter')">Сбросить</span>
+              </div>
+            </div>
+            <div class="filter-options" id="placeFilter"></div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Устройство (device)</div>
+              <div class="filter-actions">
+                <span class="filter-action" onclick="selectAll('#deviceFilter')">Все</span>
+                <span class="filter-action" onclick="clearAll('#deviceFilter')">Сбросить</span>
+              </div>
+            </div>
+            <div class="filter-options" id="deviceFilter"></div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Регион (звонки)</div>
+              <div class="filter-actions">
+                <span class="filter-action" onclick="selectAll('#regionFilter')">Все</span>
+                <span class="filter-action" onclick="clearAll('#regionFilter')">Сбросить</span>
+              </div>
+            </div>
+            <div class="filter-options" id="regionFilter"></div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Тип данных</div>
+            </div>
+            <div class="filter-options">
+              <label class="filter-option"><input type="checkbox" checked data-type="leads"> Заявки с сайта</label>
+              <label class="filter-option"><input type="checkbox" checked data-type="calls"> Звонки (Mango)</label>
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Качество (звонки)</div>
+            </div>
+            <div class="filter-options">
+              <label class="filter-option"><input type="radio" name="callQuality" checked value="all"> Все</label>
+              <label class="filter-option"><input type="radio" name="callQuality" value="unique"> Только уникальные</label>
+              <label class="filter-option"><input type="radio" name="callQuality" value="quality"> Только качественные</label>
+              <label class="filter-option"><input type="radio" name="callQuality" value="confirmed"> Только подтвержденные</label>
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <div class="filter-section-header">
+              <div class="filter-section-title">Длительность (сек)</div>
+            </div>
+            <div class="filter-options">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input class="date-input" id="durMin" type="number" min="0" placeholder="от" style="width:100px">
+                <input class="date-input" id="durMax" type="number" min="0" placeholder="до" style="width:100px">
+              </div>
+              <div style="margin-top:8px;color:var(--text3);font-size:12px;font-weight:700">
+                Пример: от 30 до 300 → звонки 30с–5мин
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-accent" onclick="applyFilters()">Применить</button>
+          <button class="btn" onclick="resetFilters()">Сбросить все</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="data-tabs">
+      <button class="data-tab active" data-tab="overview">Обзор</button>
+      <button class="data-tab" data-tab="analytics">📊 Аналитика</button>
+      <button class="data-tab" data-tab="calls">Звонки <span class="count" id="tabCallsCount">0</span></button>
+      <button class="data-tab" data-tab="leads">Заявки <span class="count" id="tabLeadsCount">0</span></button>
+      <button class="data-tab" data-tab="campaigns">Кампании</button>
+      <button class="data-tab" data-tab="conversions">Конверсии</button>
+      <button class="data-tab" data-tab="quality">Качество</button>
+      <button class="data-tab" data-tab="sources">Источники</button>
+      <button class="data-tab" data-tab="compare">Сравнение</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="metrics" id="overviewMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Динамика обращений</div>
+              <div class="chart-subtitle">Заявки (сайт) + звонки (Mango) по дням</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartDailyAll"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Заявки vs Звонки</div>
+              <div class="chart-subtitle">доля типов обращений</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartTypeSplit"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Воронка звонков</div>
+              <div class="chart-subtitle">все → уникальные → качественные → подтвержденные</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCallFunnel"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Heatmap звонков</div>
+              <div class="chart-subtitle">час × день недели</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartHeatmap"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">ТОП источников (utm_source)</div>
+              <div class="chart-subtitle">лиды / звонки / подтвержденные</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartSourcesTop"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Сводка по источникам (ТОП 20)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableOverviewSources">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Лиды</th>
+                <th>Звонки</th>
+                <th>Подтв.</th>
+                <th>Всего</th>
+                <th>Доля</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics (NEW) -->
+    <div class="tab-content" id="tab-analytics">
+      <div class="metrics" id="analyticsMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📅 Сравнение по месяцам (Month-over-Month)</div>
+              <div class="chart-subtitle">Динамика лидов и звонков помесячно</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartMonthlyComparison"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📈 Тренд по неделям</div>
+              <div class="chart-subtitle">Еженедельная динамика с линией тренда</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartWeeklyTrend"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">⏰ Активность по часам (Лиды)</div>
+              <div class="chart-subtitle">В какие часы приходят заявки</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartHourlyLeads"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">⏰ Активность по часам (Звонки)</div>
+              <div class="chart-subtitle">В какие часы звонят</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartHourlyCalls"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📊 Эффективность по дням недели</div>
+              <div class="chart-subtitle">Какой день лучше конвертит</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartWeekdayEfficiency"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📱 Устройства детально</div>
+              <div class="chart-subtitle">Desktop / Mobile / Tablet с конверсиями</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartDevicesDetailed"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">🎯 Воронка по источникам</div>
+              <div class="chart-subtitle">Звонки → Уникальные → Качественные → Подтверждённые (ТОП-8)</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartSourcesFunnel"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📉 Динамика качества</div>
+              <div class="chart-subtitle">Как меняется % подтверждённых со временем</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartQualityDynamics"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Детальная статистика по месяцам</div>
+        </div>
+        <div class="table-container">
+          <table id="tableMonthlyStats">
+            <thead>
+              <tr>
+                <th>Месяц</th>
+                <th>Лиды</th>
+                <th>Звонки</th>
+                <th>Уник.</th>
+                <th>Качеств.</th>
+                <th>Подтв.</th>
+                <th>% подтв.</th>
+                <th>Δ к пред.</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaigns (NEW) -->
+    <div class="tab-content" id="tab-campaigns">
+      <div class="metrics" id="campaignsMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">🎯 ТОП кампаний по лидам</div>
+              <div class="chart-subtitle">utm_campaign — какие кампании приносят больше заявок</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartTopCampaignsLeads"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📞 ТОП кампаний по звонкам</div>
+              <div class="chart-subtitle">Какие кампании генерируют больше звонков</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartTopCampaignsCalls"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">📊 Эффективность кампаний</div>
+              <div class="chart-subtitle">% подтверждённых от звонков</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCampaignEfficiency"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">🔥 utm_content ТОП</div>
+              <div class="chart-subtitle">Какие креативы работают</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartTopContent"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Полная таблица кампаний (ТОП 50)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableCampaignsFull">
+            <thead>
+              <tr>
+                <th>Кампания</th>
+                <th>Источник</th>
+                <th>Лиды</th>
+                <th>Звонки</th>
+                <th>Подтв.</th>
+                <th>% подтв.</th>
+                <th>Гостей</th>
+                <th>Эффективность</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calls -->
+    <div class="tab-content" id="tab-calls">
+      <div class="metrics" id="callsMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Звонки по дням</div>
+              <div class="chart-subtitle">динамика звонков (после фильтров)</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCallsDaily"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Длительность</div>
+              <div class="chart-subtitle">распределение</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCallsDuration"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Регионы</div>
+              <div class="chart-subtitle">ТОП регионов по звонкам</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCallsRegions"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Куда звонят (эвристика)</div>
+              <div class="chart-subtitle">Невский / Рубинштейна / Не определено (по URL/контенту/кампании)</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCallsPlaceGuess"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Повторные звонки (ТОП 20 номеров)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableRepeatCalls">
+            <thead>
+              <tr>
+                <th>Номер клиента</th>
+                <th>Звонков</th>
+                <th>Уник.</th>
+                <th>Кач.</th>
+                <th>Подтв.</th>
+                <th>Средн. длит.</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads -->
+    <div class="tab-content" id="tab-leads">
+      <div class="metrics" id="leadsMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Заявки по дням</div>
+              <div class="chart-subtitle">динамика лидов с сайта</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartLeadsDaily"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Источники заявок</div>
+              <div class="chart-subtitle">utm_source</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartLeadsSources"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Локации</div>
+              <div class="chart-subtitle">evgenich_place</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartLeadsPlaces"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Группы гостей</div>
+              <div class="chart-subtitle">по Quantity</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartLeadsGroups"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Устройства</div>
+              <div class="chart-subtitle">device_type</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartLeadsDevices"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">ТОП кампаний (utm_campaign)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableLeadsCampaigns">
+            <thead>
+              <tr>
+                <th>Кампания</th>
+                <th>Лидов</th>
+                <th>Гостей</th>
+                <th>Ср. группа</th>
+                <th>Доля</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conversions -->
+    <div class="tab-content" id="tab-conversions">
+      <div class="metrics" id="conversionsMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Воронка конверсии</div>
+              <div class="chart-subtitle">от лидов до подтвержденных звонков</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartConversionFunnel"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Корреляция: лиды vs звонки</div>
+              <div class="chart-subtitle">по источникам</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartCorrelation"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Конверсия по дням недели</div>
+              <div class="chart-subtitle">эффективность по дням</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartConversionByDay"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Динамика конверсии</div>
+              <div class="chart-subtitle">лиды + % подтверждения</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartConversionTrend"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Конверсия по источникам (ТОП 20)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableConversionBySource">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Лиды</th>
+                <th>Звонки</th>
+                <th>Подтв.</th>
+                <th>% лид→звонок</th>
+                <th>% звонок→подтв</th>
+                <th>Quality Score</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality -->
+    <div class="tab-content" id="tab-quality">
+      <div class="metrics" id="qualityMetrics"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Рейтинг источников</div>
+              <div class="chart-subtitle">по Quality Score (подтв/всего)</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartQualityRating"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Качество vs Объем</div>
+              <div class="chart-subtitle">scatter: ось X = объем, Y = качество</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartQualityVsVolume"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Распределение качества</div>
+              <div class="chart-subtitle">сколько источников в каждой категории</div>
+            </div>
+          </div>
+          <div class="chart-container"><canvas id="chartQualityDistribution"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">ТОП источников по качеству</div>
+        </div>
+        <div class="table-container">
+          <table id="tableTopQuality">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Всего</th>
+                <th>Подтв.</th>
+                <th>Quality %</th>
+                <th>Категория</th>
+                <th>Оценка</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Проблемные источники (низкая конверсия)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableProblematicSources">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Всего</th>
+                <th>Подтв.</th>
+                <th>Quality %</th>
+                <th>Потери</th>
+                <th>Рекомендация</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="tab-content" id="tab-sources">
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Сравнение источников (utm_source)</div>
+              <div class="chart-subtitle">лиды / звонки / подтвержденные</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartSourcesCompare"></canvas></div>
+        </div>
+
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Каналы (utm_medium / Канал)</div>
+              <div class="chart-subtitle">что реально дает результат</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartMediumCompare"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Полная таблица источников (ТОП 40)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableSourcesFull">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Лиды</th>
+                <th>Звонки</th>
+                <th>Подтв.</th>
+                <th>Всего</th>
+                <th>% подтв. от звонков</th>
+                <th>Доля</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compare -->
+    <div class="tab-content" id="tab-compare">
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:900;font-size:14px">Сравнение по месяцам (MoM)</div>
+            <div style="margin-top:6px;color:var(--text3);font-size:12px;font-weight:700;max-width:920px">
+              Показывает, какие каналы/источники <b>просели</b> или <b>выросли</b> месяц к месяцу по звонкам, лидам и подтвержденным звонкам.
+              Берем последний полный месяц vs предыдущий, либо текущий месяц vs прошлый (если полный).
+            </div>
+          </div>
+          <button class="btn btn-accent" onclick="buildMoM()">Пересчитать MoM</button>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">MoM: каналы</div>
+              <div class="chart-subtitle">Δ% (рост/падение) по звонкам/лидам/подтв.</div>
+            </div>
+          </div>
+          <div class="chart-container tall"><canvas id="chartMoM"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">MoM таблица (ТОП 30 изменений)</div>
+        </div>
+        <div class="table-container">
+          <table id="tableMoM">
+            <thead>
+              <tr>
+                <th>Канал</th>
+                <th>Лиды (тек/прош)</th>
+                <th>Δ лиды</th>
+                <th>Звонки (тек/прош)</th>
+                <th>Δ звонки</th>
+                <th>Подтв. (тек/прош)</th>
+                <th>Δ подтв.</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tooltip bubble -->
+<div class="tooltip-bubble" id="tooltipBubble">
+  <div class="t-title" id="ttTitle"></div>
+  <div class="t-text" id="ttText"></div>
+</div>
+
+<script>
+  /******************************************************************
+   *  ЕВГЕНИЧ — ПРОФ. ДАШБОРД
+   *  Источник данных: API сервер → Google Sheets → CSV
+   *
+   *  ЛИДЫ (sheet: "Сборка Лиды сайт") — ключевые поля:
+   *    sent (YYYY-MM-DD HH:mm:ss), Quantity, evgenich_place,
+   *    utm_source, utm_medium, utm_campaign, utm_content, utm_term, device_type
+   *
+   *  ЗВОНКИ (sheet: "Манго Телефония") — ключевые поля:
+   *    Тип обращения, Номер клиента, Время (DD.MM.YYYY HH:mm),
+   *    Длительность (сек), Источник (utm), Канал, Кампания, Контент,
+   *    URL входа, Регион, Уникальное, Качественное, Подтвержденный лид, Источник обращения
+   *
+   *  Примечание про "уникальные/качественные/подтвержденные":
+   *   - Уникальные: Уникальное = "Новые" (новый номер/лид по логике Mango)
+   *   - Качественные: Качественное = "Да" (критерий качества Mango)
+   *   - Подтвержденные: Подтвержденный лид = "Да" (подтвержден в CRM/оператором)
+   ******************************************************************/
+
+  // ====== SETTINGS ======
+  // API endpoint (относительный путь для Railway)
+  const API_URL = '/api/data';
+
+  // UI colors (chart datasets)
+  const COLORS = ['#ff6b35','#10b981','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#84cc16','#f43f5e','#6366f1','#14b8a6','#eab308'];
+
+  Chart.defaults.color = '#a0a0b0';
+  Chart.defaults.borderColor = '#2a2a35';
+  Chart.defaults.font.family = '"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif';
+  Chart.defaults.font.weight = 500;
+  Chart.register(ChartDataLabels);
+
+  // ====== STATE ======
+  let rawLeads = [];
+  let rawCalls = [];
+  let filteredLeads = [];
+  let filteredCalls = [];
+  let compareLeads = [];
+  let compareCalls = [];
+  let charts = {};
+
+  // Month picker state
+  let pickerYear = new Date().getFullYear();
+  let selectedMonths = []; // [{year, month}]
+  const MONTH_NAMES = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const MONTH_NAMES_FULL = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const WEEKDAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  let filters = {
+    compareEnabled: false
+  };
+
+  // ====== INIT ======
+  window.addEventListener('DOMContentLoaded', () => {
+    initTooltips();
+    initControls();
+    initMonthPicker();
+    loadAllData();
+  });
+
+  // ====== MONTH PICKER ======
+  function initMonthPicker() {
+    renderMonthPicker();
+  }
+
+  function renderMonthPicker() {
+    const grid = document.getElementById('monthsGrid');
+    const yearEl = document.getElementById('pickerYear');
+    yearEl.textContent = pickerYear;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    grid.innerHTML = MONTH_NAMES.map((name, idx) => {
+      const isDisabled = pickerYear > currentYear || (pickerYear === currentYear && idx > currentMonth);
+      const isSelected = selectedMonths.some(m => m.year === pickerYear && m.month === idx);
+      const isInRange = isMonthInRange(pickerYear, idx);
+      
+      let cls = 'month-btn';
+      if (isDisabled) cls += ' disabled';
+      else if (isSelected) cls += ' selected';
+      else if (isInRange) cls += ' in-range';
+
+      return `<button class="${cls}" data-month="${idx}" ${isDisabled ? 'disabled' : ''} onclick="toggleMonth(${pickerYear}, ${idx})">${name}</button>`;
+    }).join('');
+  }
+
+  function isMonthInRange(year, month) {
+    if (selectedMonths.length < 2) return false;
+    const sorted = [...selectedMonths].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const val = year * 12 + month;
+    return val > first.year * 12 + first.month && val < last.year * 12 + last.month;
+  }
+
+  function changePickerYear(delta) {
+    const newYear = pickerYear + delta;
+    if (newYear >= 2020 && newYear <= new Date().getFullYear()) {
+      pickerYear = newYear;
+      renderMonthPicker();
+    }
+  }
+
+  function toggleMonth(year, month) {
+    const idx = selectedMonths.findIndex(m => m.year === year && m.month === month);
+    
+    if (idx >= 0) {
+      selectedMonths.splice(idx, 1);
+    } else {
+      if (selectedMonths.length >= 2) {
+        selectedMonths = [];
+      }
+      selectedMonths.push({ year, month });
+    }
+
+    if (selectedMonths.length === 2) {
+      selectedMonths.sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
+    }
+
+    renderMonthPicker();
+    applyMonthSelection();
+  }
+
+  function applyMonthSelection() {
+    if (selectedMonths.length === 0) return;
+
+    let fromDate, toDate;
+
+    if (selectedMonths.length === 1) {
+      const m = selectedMonths[0];
+      fromDate = new Date(m.year, m.month, 1);
+      toDate = new Date(m.year, m.month + 1, 0);
+    } else {
+      const first = selectedMonths[0];
+      const last = selectedMonths[selectedMonths.length - 1];
+      fromDate = new Date(first.year, first.month, 1);
+      toDate = new Date(last.year, last.month + 1, 0);
+    }
+
+    document.getElementById('dateFrom').value = formatDate(fromDate);
+    document.getElementById('dateTo').value = formatDate(toDate);
+
+    // Clear period buttons active state
+    document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+
+    applyFilters();
+  }
+
+  function selectMonthRange(range) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    selectedMonths = [];
+
+    switch (range) {
+      case 'q1':
+        selectedMonths = [{year: pickerYear, month: 0}, {year: pickerYear, month: 2}];
+        break;
+      case 'q2':
+        selectedMonths = [{year: pickerYear, month: 3}, {year: pickerYear, month: 5}];
+        break;
+      case 'q3':
+        selectedMonths = [{year: pickerYear, month: 6}, {year: pickerYear, month: 8}];
+        break;
+      case 'q4':
+        selectedMonths = [{year: pickerYear, month: 9}, {year: pickerYear, month: 11}];
+        break;
+      case 'h1':
+        selectedMonths = [{year: pickerYear, month: 0}, {year: pickerYear, month: 5}];
+        break;
+      case 'h2':
+        selectedMonths = [{year: pickerYear, month: 6}, {year: pickerYear, month: 11}];
+        break;
+      case 'year':
+        selectedMonths = [{year: pickerYear, month: 0}, {year: pickerYear, month: 11}];
+        break;
+      case 'last3':
+        const m3 = new Date(currentYear, currentMonth - 2, 1);
+        selectedMonths = [{year: m3.getFullYear(), month: m3.getMonth()}, {year: currentYear, month: currentMonth}];
+        pickerYear = currentYear;
+        break;
+      case 'last6':
+        const m6 = new Date(currentYear, currentMonth - 5, 1);
+        selectedMonths = [{year: m6.getFullYear(), month: m6.getMonth()}, {year: currentYear, month: currentMonth}];
+        pickerYear = currentYear;
+        break;
+    }
+
+    // Validate months don't exceed current
+    selectedMonths = selectedMonths.filter(m => {
+      return m.year < currentYear || (m.year === currentYear && m.month <= currentMonth);
+    });
+
+    renderMonthPicker();
+    applyMonthSelection();
+  }
+
+  function initControls(){
+    // tabs
+    document.querySelectorAll('.data-tab').forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        document.querySelectorAll('.data-tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // quick periods
+    document.querySelectorAll('.period-btn[data-period]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.period-btn[data-period]').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        setQuickPeriod(btn.dataset.period);
+      });
+    });
+
+    // compare toggle
+    document.getElementById('compareToggle').addEventListener('click', ()=>{
+      const enabled = !filters.compareEnabled;
+      filters.compareEnabled = enabled;
+      document.getElementById('compareToggle').classList.toggle('active', enabled);
+      document.getElementById('compareDates').classList.toggle('visible', enabled);
+      if(enabled){
+        // if no compare period set, suggest previous period
+        const from = document.getElementById('dateFrom').value;
+        const to   = document.getElementById('dateTo').value;
+        if(from && to) setComparePeriod('prevPeriod');
+      }
+      applyFilters();
+    });
+
+    document.querySelectorAll('.period-btn[data-compare]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        setComparePeriod(btn.dataset.compare);
+      });
+    });
+
+    // filters toggle
+    document.getElementById('filtersToggle').addEventListener('click', ()=>{
+      const content = document.getElementById('filtersContent');
+      const toggle = document.getElementById('filtersToggle');
+      content.classList.toggle('visible');
+      toggle.textContent = content.classList.contains('visible') ? 'Скрыть фильтры' : 'Показать фильтры';
+    });
+
+    // dates
+    document.getElementById('dateFrom').addEventListener('change', ()=>applyFilters());
+    document.getElementById('dateTo').addEventListener('change', ()=>applyFilters());
+    document.getElementById('compareDateFrom').addEventListener('change', ()=>applyFilters());
+    document.getElementById('compareDateTo').addEventListener('change', ()=>applyFilters());
+
+    // duration inputs
+    document.getElementById('durMin').addEventListener('change', ()=>applyFilters());
+    document.getElementById('durMax').addEventListener('change', ()=>applyFilters());
+
+    // call quality radio
+    document.querySelectorAll('input[name="callQuality"]').forEach(r=>{
+      r.addEventListener('change', ()=>applyFilters());
+    });
+  }
+
+  function setQuickPeriod(period){
+    const today = new Date();
+    let from='', to='';
+
+    const fmt = (d)=> d.toISOString().split('T')[0];
+
+    switch(period){
+      case 'today': from = to = fmt(today); break;
+      case 'yesterday':
+        const y = new Date(today); y.setDate(today.getDate()-1);
+        from = to = fmt(y); break;
+      case '7days':
+        to = fmt(today);
+        const d7 = new Date(today); d7.setDate(today.getDate()-6);
+        from = fmt(d7); break;
+      case '30days':
+        to = fmt(today);
+        const d30 = new Date(today); d30.setDate(today.getDate()-29);
+        from = fmt(d30); break;
+      case 'thisMonth':
+        from = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+        to = fmt(today); break;
+      case 'lastMonth':
+        from = fmt(new Date(today.getFullYear(), today.getMonth()-1, 1));
+        to = fmt(new Date(today.getFullYear(), today.getMonth(), 0));
+        break;
+      case 'q1':
+        from = fmt(new Date(today.getFullYear(), 0, 1));
+        to = fmt(new Date(today.getFullYear(), 2, 31));
+        break;
+      case 'q2':
+        from = fmt(new Date(today.getFullYear(), 3, 1));
+        to = fmt(new Date(today.getFullYear(), 5, 30));
+        break;
+      case 'q3':
+        from = fmt(new Date(today.getFullYear(), 6, 1));
+        to = fmt(new Date(today.getFullYear(), 8, 30));
+        break;
+      case 'q4':
+        from = fmt(new Date(today.getFullYear(), 9, 1));
+        to = fmt(new Date(today.getFullYear(), 11, 31));
+        break;
+      case 'thisYear':
+        from = fmt(new Date(today.getFullYear(), 0, 1));
+        to = fmt(today);
+        break;
+      case 'all':
+        from = ''; to=''; break;
+    }
+
+    // Clear month picker selection
+    selectedMonths = [];
+    renderMonthPicker();
+
+    document.getElementById('dateFrom').value = from;
+    document.getElementById('dateTo').value = to;
+    applyFilters();
+  }
+
+  function setComparePeriod(type){
+    const from = document.getElementById('dateFrom').value;
+    const to   = document.getElementById('dateTo').value;
+    if(!from || !to) return;
+
+    const fromDate = new Date(from);
+    const toDate   = new Date(to);
+    const diffDays = Math.round((toDate - fromDate) / (1000*60*60*24)) + 1;
+
+    let cFrom, cTo;
+    switch(type){
+      case 'prevPeriod':
+        cTo = new Date(fromDate); cTo.setDate(fromDate.getDate()-1);
+        cFrom = new Date(cTo); cFrom.setDate(cTo.getDate()-diffDays+1);
+        break;
+      case 'prevMonth':
+        cFrom = new Date(fromDate.getFullYear(), fromDate.getMonth()-1, fromDate.getDate());
+        cTo   = new Date(toDate.getFullYear(), toDate.getMonth()-1, toDate.getDate());
+        break;
+      case 'prevYear':
+        cFrom = new Date(fromDate.getFullYear()-1, fromDate.getMonth(), fromDate.getDate());
+        cTo   = new Date(toDate.getFullYear()-1, toDate.getMonth(), toDate.getDate());
+        break;
+    }
+
+    document.getElementById('compareDateFrom').value = formatDate(cFrom);
+    document.getElementById('compareDateTo').value   = formatDate(cTo);
+    applyFilters();
+  }
+
+  function formatDate(date){
+    return date.toISOString().split('T')[0];
+  }
+
+  // ====== LOAD DATA ======
+  async function loadAllData(forceRefresh = false){
+    const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loaderText');
+    const dashboard = document.getElementById('dashboard');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+
+    loader.style.display='flex';
+    dashboard.classList.remove('visible');
+    statusDot.className='status-dot loading';
+    statusText.textContent='Загрузка…';
+
+    try{
+      let data = null;
+      
+      // Пробуем API сначала
+      try {
+        loaderText.textContent='Загружаем данные с сервера…';
+        const url = forceRefresh ? `${API_URL}?refresh=true` : API_URL;
+        const resp = await fetch(url);
+        
+        if(resp.ok) {
+          data = await resp.json();
+        }
+      } catch(apiErr) {
+        console.log('API недоступен, загружаем напрямую из Google Sheets');
+      }
+      
+      // Fallback: загружаем напрямую из Google Sheets
+      if(!data || !data.leads) {
+        loaderText.textContent='Загружаем из Google Sheets…';
+        
+        const SPREADSHEET_ID = '1CX7pjfDHiMiOE6TRsdTbhYdWF8KGAmGMGtdCx8TEtP0';
+        const SHEET_LEADS = 'Сборка Лиды сайт';
+        const SHEET_CALLS = 'Манго Телефония';
+        
+        const leadsUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_LEADS)}`;
+        const callsUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_CALLS)}`;
+        
+        const [leadsResp, callsResp] = await Promise.all([
+          fetch(leadsUrl),
+          fetch(callsUrl)
+        ]);
+        
+        if(!leadsResp.ok || !callsResp.ok) {
+          throw new Error('Не удалось загрузить данные из Google Sheets');
+        }
+        
+        const leadsCSV = await leadsResp.text();
+        const callsCSV = await callsResp.text();
+        
+        data = {
+          leads: parseCSV(leadsCSV),
+          calls: parseCSV(callsCSV)
+        };
+      }
+      
+      rawLeads = data.leads || [];
+      
+      // Mango calls filter
+      const allCalls = data.calls || [];
+      rawCalls = allCalls
+        .filter(r => (r['Источник обращения'] || '').toLowerCase() === 'mango')
+        .filter(r => (r['Тип обращения'] || '').toLowerCase().includes('звон'));
+
+      // update counters
+      document.getElementById('tabLeadsCount').textContent = rawLeads.length;
+      document.getElementById('tabCallsCount').textContent = rawCalls.length;
+
+      initFilters();
+      applyFilters();
+
+      loader.style.display='none';
+      dashboard.classList.add('visible');
+      statusDot.className='status-dot';
+      
+      // Показываем статус кэша
+      const cacheInfo = data.stale ? ' (кэш)' : '';
+      statusText.textContent = `Лиды: ${rawLeads.length} · Звонки: ${rawCalls.length}${cacheInfo}`;
+      
+    } catch(err){
+      loader.style.display='none';
+      statusDot.className='status-dot error';
+      statusText.textContent='Ошибка: '+err.message;
+      console.error(err);
+    }
+  }
+
+  // ====== CSV PARSE (для fallback, если нужно) ======
+  function parseCSV(text){
+    const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+    if(lines.length < 2) return [];
+    const headers = parseCSVLine(lines[0]);
+    return lines.slice(1).map(line=>{
+      const values = parseCSVLine(line);
+      const row = {};
+      headers.forEach((h,i)=> row[h] = (values[i] ?? '').trim());
+      return row;
+    });
+  }
+
+  function parseCSVLine(line){
+    const res = [];
+    let cur = '';
+    let inQ = false;
+
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+
+      if(ch === '"' ){
+        // handle escaped quotes
+        if(inQ && line[i+1] === '"'){
+          cur += '"';
+          i++;
+        } else {
+          inQ = !inQ;
+        }
+      } else if(ch === ',' && !inQ){
+        res.push(cur);
+        cur='';
+      } else {
+        cur += ch;
+      }
+    }
+    res.push(cur);
+    return res.map(s=>s.replace(/\uFEFF/g,'').trim());
+  }
+
+  // ====== FILTERS INIT ======
+  function initFilters(){
+    // sources
+    const sources = {};
+    rawLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      sources[s] = (sources[s]||0)+1;
+    });
+    rawCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      sources[s] = (sources[s]||0)+1;
+    });
+    document.getElementById('sourcesFilter').innerHTML = renderFilterOptions(sources, 'source');
+
+    // mediums (leads: utm_medium, calls: Канал)
+    const mediums = {};
+    rawLeads.forEach(r=>{
+      const m = r['utm_medium'] || 'Не указано';
+      mediums[m] = (mediums[m]||0)+1;
+    });
+    rawCalls.forEach(r=>{
+      const m = r['Канал'] || 'Не указано';
+      mediums[m] = (mediums[m]||0)+1;
+    });
+    document.getElementById('mediumFilter').innerHTML = renderFilterOptions(mediums, 'medium', 24);
+
+    // places (leads)
+    const places = {};
+    rawLeads.forEach(r=>{
+      const p = r['evgenich_place'] || 'Не указано';
+      places[p] = (places[p]||0)+1;
+    });
+    document.getElementById('placeFilter').innerHTML = renderFilterOptions(places, 'place', 24);
+
+    // devices (leads)
+    const devices = {};
+    rawLeads.forEach(r=>{
+      const d = r['device_type'] || 'Не указано';
+      devices[d] = (devices[d]||0)+1;
+    });
+    document.getElementById('deviceFilter').innerHTML = renderFilterOptions(devices, 'device', 24);
+
+    // regions (calls)
+    const regions = {};
+    rawCalls.forEach(r=>{
+      const reg = r['Регион'] || 'Не указано';
+      regions[reg] = (regions[reg]||0)+1;
+    });
+    document.getElementById('regionFilter').innerHTML = renderFilterOptions(regions, 'region', 30);
+  }
+
+  function renderFilterOptions(map, attr, limit=999){
+    return Object.entries(map)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0, limit)
+      .map(([name,count])=>{
+        const safe = escapeHtml(name);
+        return `<label class="filter-option">
+          <input type="checkbox" checked data-${attr}="${safe}">
+          <span>${safe}</span>
+          <span class="filter-option-count">${count}</span>
+        </label>`;
+      }).join('');
+  }
+
+  function selectAll(selector){
+    document.querySelectorAll(selector+' input[type="checkbox"]').forEach(i=>i.checked=true);
+  }
+  function clearAll(selector){
+    document.querySelectorAll(selector+' input[type="checkbox"]').forEach(i=>i.checked=false);
+  }
+
+  function resetFilters(){
+    // check all in filters
+    document.querySelectorAll('.filters-content input[type="checkbox"]').forEach(i=>i.checked=true);
+    // call quality radio to all
+    const qAll = document.querySelector('input[name="callQuality"][value="all"]');
+    if(qAll) qAll.checked = true;
+    // duration
+    document.getElementById('durMin').value='';
+    document.getElementById('durMax').value='';
+    // dates
+    document.getElementById('dateFrom').value='';
+    document.getElementById('dateTo').value='';
+    document.getElementById('compareDateFrom').value='';
+    document.getElementById('compareDateTo').value='';
+    // quick period UI
+    document.querySelectorAll('.period-btn[data-period]').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.period-btn[data-period="all"]').classList.add('active');
+
+    // compare off
+    filters.compareEnabled = false;
+    document.getElementById('compareToggle').classList.remove('active');
+    document.getElementById('compareDates').classList.remove('visible');
+
+    applyFilters();
+  }
+
+  // ====== APPLY FILTERS ======
+  function applyFilters(){
+    // selected
+    const selectedSources = [...document.querySelectorAll('#sourcesFilter input:checked')].map(i=>i.dataset.source);
+    const selectedMediums = [...document.querySelectorAll('#mediumFilter input:checked')].map(i=>i.dataset.medium);
+    const selectedPlaces  = [...document.querySelectorAll('#placeFilter input:checked')].map(i=>i.dataset.place);
+    const selectedDevices = [...document.querySelectorAll('#deviceFilter input:checked')].map(i=>i.dataset.device);
+    const selectedRegions = [...document.querySelectorAll('#regionFilter input:checked')].map(i=>i.dataset.region);
+
+    const includeLeads = document.querySelector('input[data-type="leads"]').checked;
+    const includeCalls = document.querySelector('input[data-type="calls"]').checked;
+
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo   = document.getElementById('dateTo').value;
+
+    const durMin = parseInt(document.getElementById('durMin').value || '0',10);
+    const durMaxVal = document.getElementById('durMax').value;
+    const durMax = durMaxVal ? parseInt(durMaxVal,10) : null;
+
+    const callQuality = (document.querySelector('input[name="callQuality"]:checked')?.value || 'all');
+
+    // leads filter
+    filteredLeads = includeLeads ? rawLeads.filter(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      const m = r['utm_medium'] || 'Не указано';
+      const p = r['evgenich_place'] || 'Не указано';
+      const d = r['device_type'] || 'Не указано';
+
+      if(selectedSources.length && !selectedSources.includes(s)) return false;
+      if(selectedMediums.length && !selectedMediums.includes(m)) return false;
+      if(selectedPlaces.length  && !selectedPlaces.includes(p)) return false;
+      if(selectedDevices.length && !selectedDevices.includes(d)) return false;
+
+      if(dateFrom || dateTo){
+        const sent = r['sent'] || '';
+        const dd = sent.split(' ')[0]; // yyyy-mm-dd
+        if(dateFrom && dd < dateFrom) return false;
+        if(dateTo && dd > dateTo) return false;
+      }
+      return true;
+    }) : [];
+
+    // calls filter
+    filteredCalls = includeCalls ? rawCalls.filter(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      const m = r['Канал'] || 'Не указано';
+      const reg = r['Регион'] || 'Не указано';
+
+      if(selectedSources.length && !selectedSources.includes(s)) return false;
+      if(selectedMediums.length && !selectedMediums.includes(m)) return false;
+      if(selectedRegions.length && !selectedRegions.includes(reg)) return false;
+
+      // date filter (Время = dd.mm.yyyy hh:mm)
+      if(dateFrom || dateTo){
+        const dt = parseCallDateISO(r['Время'] || '');
+        if(!dt) return false;
+        if(dateFrom && dt < dateFrom) return false;
+        if(dateTo && dt > dateTo) return false;
+      }
+
+      // duration
+      const dur = parseInt(r['Длительность'] || '0',10) || 0;
+      if(dur < durMin) return false;
+      if(durMax !== null && dur > durMax) return false;
+
+      // call quality mode
+      if(callQuality === 'unique' && (r['Уникальное'] || '') !== 'Новые') return false;
+      if(callQuality === 'quality' && (r['Качественное'] || '') !== 'Да') return false;
+      if(callQuality === 'confirmed' && (r['Подтвержденный лид'] || '') !== 'Да') return false;
+
+      return true;
+    }) : [];
+
+    // compare period
+    if(filters.compareEnabled){
+      const cFrom = document.getElementById('compareDateFrom').value;
+      const cTo   = document.getElementById('compareDateTo').value;
+
+      compareLeads = includeLeads ? rawLeads.filter(r=>{
+        const sent = r['sent'] || '';
+        const dd = sent.split(' ')[0];
+        if(cFrom && dd < cFrom) return false;
+        if(cTo && dd > cTo) return false;
+        return true;
+      }) : [];
+
+      compareCalls = includeCalls ? rawCalls.filter(r=>{
+        const dt = parseCallDateISO(r['Время'] || '');
+        if(!dt) return false;
+        if(cFrom && dt < cFrom) return false;
+        if(cTo && dt > cTo) return false;
+        return true;
+      }) : [];
+    } else {
+      compareLeads = [];
+      compareCalls = [];
+    }
+
+    // update counts
+    document.getElementById('tabLeadsCount').textContent = filteredLeads.length;
+    document.getElementById('tabCallsCount').textContent = filteredCalls.length;
+
+    updateAll();
+  }
+
+  // ====== UPDATE ALL ======
+  function updateAll(){
+    updateOverview();
+    updateAnalytics();
+    updateCampaigns();
+    updateCalls();
+    updateLeads();
+    updateConversions();
+    updateQuality();
+    updateSources();
+    buildMoM(); // keep compare fresh
+  }
+
+  // ====== ANALYTICS TAB (NEW) ======
+  function updateAnalytics() {
+    // Check if container exists
+    const metricsContainer = document.getElementById('analyticsMetrics');
+    if (!metricsContainer) return;
+
+    // Metrics
+    const totalLeads = filteredLeads.length;
+    const totalCalls = filteredCalls.length;
+    const confirmedCalls = filteredCalls.filter(r=>(r['Подтвержденный лид']||'')==='Да').length;
+    const avgConfirmRate = totalCalls > 0 ? Math.round(confirmedCalls / totalCalls * 100) : 0;
+
+    // Calculate monthly data
+    const monthlyData = getMonthlyData();
+    const currentMonthData = monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : { leads: 0, calls: 0 };
+    const prevMonthData = monthlyData.length > 1 ? monthlyData[monthlyData.length - 2] : { leads: 0, calls: 0 };
+
+    const momLeads = (prevMonthData.leads || 0) > 0 ? pct(currentMonthData.leads || 0, prevMonthData.leads) : 0;
+    const momCalls = (prevMonthData.calls || 0) > 0 ? pct(currentMonthData.calls || 0, prevMonthData.calls) : 0;
+
+    metricsContainer.innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Ср. подтверждение
+          <span class="info-icon" data-tt-title="Средний % подтверждения" data-tt-text="Процент подтверждённых звонков от общего числа за период.">i</span>
+        </div>
+        <div class="metric-value green">${avgConfirmRate}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">MoM Лиды
+          <span class="info-icon" data-tt-title="Month-over-Month" data-tt-text="Изменение количества лидов относительно предыдущего месяца.">i</span>
+        </div>
+        <div class="metric-value ${momLeads >= 0 ? 'green' : 'pink'}">${momLeads >= 0 ? '+' : ''}${momLeads}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">MoM Звонки
+          <span class="info-icon" data-tt-title="Month-over-Month" data-tt-text="Изменение количества звонков относительно предыдущего месяца.">i</span>
+        </div>
+        <div class="metric-value ${momCalls >= 0 ? 'green' : 'pink'}">${momCalls >= 0 ? '+' : ''}${momCalls}%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Месяцев данных
+          <span class="info-icon" data-tt-title="Глубина данных" data-tt-text="Количество месяцев с данными в выбранном периоде.">i</span>
+        </div>
+        <div class="metric-value blue">${monthlyData.length}</div>
+      </div>
+    `;
+
+    // Destroy old charts
+    destroyCharts([
+      'monthlyComparison', 'weeklyTrend', 'hourlyLeads', 'hourlyCalls',
+      'weekdayEfficiency', 'devicesDetailed', 'sourcesFunnel', 'qualityDynamics'
+    ]);
+
+    buildMonthlyComparisonChart(monthlyData);
+    buildWeeklyTrendChart();
+    buildHourlyLeadsChart();
+    buildHourlyCallsChart();
+    buildWeekdayEfficiencyChart();
+    buildDevicesDetailedChart();
+    buildSourcesFunnelChart();
+    buildQualityDynamicsChart();
+    buildMonthlyStatsTable(monthlyData);
+  }
+
+  function getMonthlyData() {
+    const map = {};
+
+    filteredLeads.forEach(r => {
+      const sent = r['sent'] || '';
+      if (!sent) return;
+      const month = sent.substring(0, 7); // YYYY-MM
+      if (!map[month]) map[month] = { leads: 0, calls: 0, unique: 0, quality: 0, confirmed: 0 };
+      map[month].leads++;
+    });
+
+    filteredCalls.forEach(r => {
+      const dt = parseCallDateISO(r['Время'] || '');
+      if (!dt) return;
+      const month = dt.substring(0, 7);
+      if (!map[month]) map[month] = { leads: 0, calls: 0, unique: 0, quality: 0, confirmed: 0 };
+      map[month].calls++;
+      if ((r['Уникальное'] || '') === 'Новые') map[month].unique++;
+      if ((r['Качественное'] || '') === 'Да') map[month].quality++;
+      if ((r['Подтвержденный лид'] || '') === 'Да') map[month].confirmed++;
+    });
+
+    return Object.entries(map)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([month, data]) => ({ month, ...data }));
+  }
+
+  function buildMonthlyComparisonChart(monthlyData) {
+    const canvas = document.getElementById('chartMonthlyComparison');
+    if (!canvas || monthlyData.length === 0) return;
+
+    const labels = monthlyData.map(d => {
+      const [y, m] = d.month.split('-');
+      return `${MONTH_NAMES[parseInt(m) - 1]} ${y.slice(2)}`;
+    });
+    const leadsData = monthlyData.map(d => d.leads);
+    const callsData = monthlyData.map(d => d.calls);
+    const confirmedData = monthlyData.map(d => d.confirmed);
+
+    charts.monthlyComparison = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Лиды', data: leadsData, backgroundColor: 'rgba(59,130,246,.8)', borderRadius: 6 },
+          { label: 'Звонки', data: callsData, backgroundColor: 'rgba(16,185,129,.8)', borderRadius: 6 },
+          { label: 'Подтверждённые', data: confirmedData, backgroundColor: 'rgba(236,72,153,.8)', borderRadius: 6 }
+        ]
+      },
+      options: {
+        ...barOptions(true),
+        plugins: {
+          ...barOptions(true).plugins,
+          legend: { display: true, position: 'top', labels: { boxWidth: 14, padding: 12, font: { weight: 900 }, color: '#fff' } }
+        }
+      }
+    });
+  }
+
+  function buildWeeklyTrendChart() {
+    const canvas = document.getElementById('chartWeeklyTrend');
+    if (!canvas) return;
+
+    const weekMap = {};
+
+    // Get week number helper
+    function getWeekKey(date) {
+      const d = new Date(date);
+      const firstDayOfYear = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d - firstDayOfYear) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
+      return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+    }
+
+    filteredLeads.forEach(r => {
+      const sent = r['sent'] || '';
+      if (!sent) return;
+      const week = getWeekKey(sent.split(' ')[0]);
+      if (!weekMap[week]) weekMap[week] = { leads: 0, calls: 0 };
+      weekMap[week].leads++;
+    });
+
+    filteredCalls.forEach(r => {
+      const dt = parseCallDateTime(r['Время'] || '');
+      if (!dt) return;
+      const week = getWeekKey(dt);
+      if (!weekMap[week]) weekMap[week] = { leads: 0, calls: 0 };
+      weekMap[week].calls++;
+    });
+
+    const arr = Object.entries(weekMap).sort((a, b) => a[0].localeCompare(b[0])).slice(-20);
+    if (arr.length === 0) return;
+    
+    const labels = arr.map(x => x[0].split('-')[1]);
+    const leadsData = arr.map(x => x[1].leads);
+    const callsData = arr.map(x => x[1].calls);
+    const totalData = arr.map(x => x[1].leads + x[1].calls);
+
+    // Calculate trend line
+    const trendLine = calculateTrendLine(totalData);
+
+    charts.weeklyTrend = new Chart(document.getElementById('chartWeeklyTrend'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Лиды', data: leadsData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .3, pointRadius: 3 },
+          { label: 'Звонки', data: callsData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.1)', fill: true, tension: .3, pointRadius: 3 },
+          { label: 'Тренд', data: trendLine, borderColor: '#f59e0b', borderDash: [5, 5], fill: false, tension: 0, pointRadius: 0, borderWidth: 2 }
+        ]
+      },
+      options: baseLineOptions()
+    });
+  }
+
+  function calculateTrendLine(data) {
+    const n = data.length;
+    if (n < 2) return data;
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += i;
+      sumY += data[i];
+      sumXY += i * data[i];
+      sumX2 += i * i;
+    }
+
+    const denom = n * sumX2 - sumX * sumX;
+    if (denom === 0) return data;
+    
+    const slope = (n * sumXY - sumX * sumY) / denom;
+    const intercept = (sumY - slope * sumX) / n;
+
+    return data.map((_, i) => Math.round(slope * i + intercept));
+  }
+
+  function buildHourlyLeadsChart() {
+    const canvas = document.getElementById('chartHourlyLeads');
+    if (!canvas) return;
+
+    const hourCounts = new Array(24).fill(0);
+
+    filteredLeads.forEach(r => {
+      const sent = r['sent'] || '';
+      if (!sent) return;
+      const time = sent.split(' ')[1] || '';
+      const hour = parseInt(time.split(':')[0]) || 0;
+      if (hour >= 0 && hour < 24) hourCounts[hour]++;
+    });
+
+    const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+    charts.hourlyLeads = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Лиды',
+          data: hourCounts,
+          backgroundColor: hourCounts.map((_, i) => i >= 9 && i <= 21 ? 'rgba(59,130,246,.8)' : 'rgba(59,130,246,.3)'),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        ...barOptions(false),
+        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+      }
+    });
+  }
+
+  function buildHourlyCallsChart() {
+    const canvas = document.getElementById('chartHourlyCalls');
+    if (!canvas) return;
+
+    const hourCounts = new Array(24).fill(0);
+
+    filteredCalls.forEach(r => {
+      const dt = parseCallDateTime(r['Время'] || '');
+      if (!dt) return;
+      const hour = dt.getHours();
+      if (hour >= 0 && hour < 24) hourCounts[hour]++;
+    });
+
+    const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+    charts.hourlyCalls = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Звонки',
+          data: hourCounts,
+          backgroundColor: hourCounts.map((_, i) => i >= 9 && i <= 21 ? 'rgba(16,185,129,.8)' : 'rgba(16,185,129,.3)'),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        ...barOptions(false),
+        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+      }
+    });
+  }
+
+  function buildWeekdayEfficiencyChart() {
+    const canvas = document.getElementById('chartWeekdayEfficiency');
+    if (!canvas) return;
+
+    const weekdayData = WEEKDAY_NAMES.map(() => ({ leads: 0, calls: 0, confirmed: 0 }));
+
+    filteredLeads.forEach(r => {
+      const sent = r['sent'] || '';
+      if (!sent) return;
+      const d = new Date(sent.split(' ')[0]);
+      const wd = weekdayIndexMon0(d);
+      if (wd >= 0 && wd < 7) weekdayData[wd].leads++;
+    });
+
+    filteredCalls.forEach(r => {
+      const dt = parseCallDateTime(r['Время'] || '');
+      if (!dt) return;
+      const wd = weekdayIndexMon0(dt);
+      if (wd >= 0 && wd < 7) {
+        weekdayData[wd].calls++;
+        if ((r['Подтвержденный лид'] || '') === 'Да') weekdayData[wd].confirmed++;
+      }
+    });
+
+    // Calculate conversion rate per day
+    const conversionRates = weekdayData.map(d => d.calls > 0 ? Math.round(d.confirmed / d.calls * 100) : 0);
+
+    charts.weekdayEfficiency = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: WEEKDAY_NAMES,
+        datasets: [
+          { label: 'Лиды', data: weekdayData.map(d => d.leads), backgroundColor: 'rgba(59,130,246,.7)', borderRadius: 6, yAxisID: 'y' },
+          { label: 'Звонки', data: weekdayData.map(d => d.calls), backgroundColor: 'rgba(16,185,129,.7)', borderRadius: 6, yAxisID: 'y' },
+          { label: '% подтв.', data: conversionRates, type: 'line', borderColor: '#ec4899', backgroundColor: 'transparent', tension: .3, yAxisID: 'y1', pointRadius: 5 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { weight: 700 }, color: '#a0a0b0' } },
+          datalabels: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, grid: { color: '#2a2a35' }, position: 'left' },
+          y1: { beginAtZero: true, max: 100, grid: { display: false }, position: 'right', ticks: { callback: v => v + '%' } }
+        }
+      }
+    });
+  }
+
+  function buildDevicesDetailedChart() {
+    const canvas = document.getElementById('chartDevicesDetailed');
+    if (!canvas) return;
+
+    const deviceData = {};
+
+    filteredLeads.forEach(r => {
+      const dev = (r['device_type'] || 'Не указано').toLowerCase();
+      const normalized = dev.includes('mobile') ? 'Mobile' : dev.includes('tablet') ? 'Tablet' : 'Desktop';
+      if (!deviceData[normalized]) deviceData[normalized] = { leads: 0, guests: 0 };
+      deviceData[normalized].leads++;
+      deviceData[normalized].guests += parseFloat(r['Quantity']) || 0;
+    });
+
+    const labels = Object.keys(deviceData);
+    if (labels.length === 0) return;
+
+    const leadsData = labels.map(l => deviceData[l].leads);
+    const avgGuests = labels.map(l => deviceData[l].leads > 0 ? (deviceData[l].guests / deviceData[l].leads).toFixed(1) : 0);
+
+    charts.devicesDetailed = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Лиды', data: leadsData, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'], borderRadius: 8 }
+        ]
+      },
+      options: {
+        ...barOptions(false),
+        plugins: {
+          ...barOptions(false).plugins,
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            color: '#fff',
+            font: { weight: 900 },
+            formatter: (v, ctx) => {
+              const avg = avgGuests[ctx.dataIndex];
+              return `${v} (ср.${avg} гост.)`;
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function buildSourcesFunnelChart() {
+    const canvas = document.getElementById('chartSourcesFunnel');
+    if (!canvas) return;
+
+    const sourceData = {};
+
+    filteredCalls.forEach(r => {
+      const s = r['Источник (utm)'] || 'Не указано';
+      if (!sourceData[s]) sourceData[s] = { calls: 0, unique: 0, quality: 0, confirmed: 0 };
+      sourceData[s].calls++;
+      if ((r['Уникальное'] || '') === 'Новые') sourceData[s].unique++;
+      if ((r['Качественное'] || '') === 'Да') sourceData[s].quality++;
+      if ((r['Подтвержденный лид'] || '') === 'Да') sourceData[s].confirmed++;
+    });
+
+    const sorted = Object.entries(sourceData)
+      .sort((a, b) => b[1].calls - a[1].calls)
+      .slice(0, 8);
+
+    if (sorted.length === 0) return;
+
+    const labels = sorted.map(x => x[0]);
+    const callsData = sorted.map(x => x[1].calls);
+    const uniqueData = sorted.map(x => x[1].unique);
+    const qualityData = sorted.map(x => x[1].quality);
+    const confirmedData = sorted.map(x => x[1].confirmed);
+
+    charts.sourcesFunnel = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Звонки', data: callsData, backgroundColor: 'rgba(255,107,53,.7)', borderRadius: 4 },
+          { label: 'Уникальные', data: uniqueData, backgroundColor: 'rgba(245,158,11,.7)', borderRadius: 4 },
+          { label: 'Качественные', data: qualityData, backgroundColor: 'rgba(16,185,129,.7)', borderRadius: 4 },
+          { label: 'Подтверждённые', data: confirmedData, backgroundColor: 'rgba(236,72,153,.7)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        ...barOptions(true),
+        plugins: {
+          ...barOptions(true).plugins,
+          legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { weight: 700 }, color: '#a0a0b0' } }
+        }
+      }
+    });
+  }
+
+  function buildQualityDynamicsChart() {
+    const canvas = document.getElementById('chartQualityDynamics');
+    if (!canvas) return;
+
+    const monthlyData = getMonthlyData();
+    if (!monthlyData || monthlyData.length === 0) return;
+
+    const labels = monthlyData.map(d => {
+      const [y, m] = d.month.split('-');
+      return `${MONTH_NAMES[parseInt(m) - 1]} ${y.slice(2)}`;
+    });
+
+    const confirmRates = monthlyData.map(d => d.calls > 0 ? Math.round(d.confirmed / d.calls * 100) : 0);
+    const qualityRates = monthlyData.map(d => d.calls > 0 ? Math.round(d.quality / d.calls * 100) : 0);
+
+    charts.qualityDynamics = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: '% качественных', data: qualityRates, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.1)', fill: true, tension: .3, pointRadius: 4 },
+          { label: '% подтверждённых', data: confirmRates, borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,.1)', fill: true, tension: .3, pointRadius: 4 }
+        ]
+      },
+      options: {
+        ...baseLineOptions(),
+        scales: {
+          ...baseLineOptions().scales,
+          y: { ...baseLineOptions().scales.y, max: 100, ticks: { callback: v => v + '%' } }
+        }
+      }
+    });
+  }
+
+  function buildMonthlyStatsTable(monthlyData) {
+    const tbody = document.querySelector('#tableMonthlyStats tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = monthlyData.map((d, i) => {
+      const [y, m] = d.month.split('-');
+      const monthName = `${MONTH_NAMES_FULL[parseInt(m) - 1]} ${y}`;
+      const confirmRate = d.calls > 0 ? Math.round(d.confirmed / d.calls * 100) : 0;
+
+      const prev = monthlyData[i - 1];
+      let delta = '—';
+      if (prev) {
+        const prevTotal = prev.leads + prev.calls;
+        const currTotal = d.leads + d.calls;
+        const pctChange = prevTotal > 0 ? pct(currTotal, prevTotal) : 0;
+        delta = `<span class="${pctChange >= 0 ? 'badge-green' : 'badge-red'} badge">${pctChange >= 0 ? '+' : ''}${pctChange}%</span>`;
+      }
+
+      return `<tr>
+        <td><span class="badge badge-blue">${monthName}</span></td>
+        <td>${fmtInt(d.leads)}</td>
+        <td>${fmtInt(d.calls)}</td>
+        <td>${fmtInt(d.unique)}</td>
+        <td>${fmtInt(d.quality)}</td>
+        <td>${fmtInt(d.confirmed)}</td>
+        <td><b>${confirmRate}%</b></td>
+        <td>${delta}</td>
+      </tr>`;
+    }).reverse().join('');
+  }
+
+  // ====== CAMPAIGNS TAB (NEW) ======
+  function updateCampaigns() {
+    // Check if container exists
+    const metricsContainer = document.getElementById('campaignsMetrics');
+    if (!metricsContainer) return;
+
+    const campaignData = {};
+
+    filteredLeads.forEach(r => {
+      const campaign = r['utm_campaign'] || 'Не указано';
+      const source = r['utm_source'] || 'Не указано';
+      const key = `${campaign}|||${source}`;
+      if (!campaignData[key]) campaignData[key] = { campaign, source, leads: 0, calls: 0, confirmed: 0, guests: 0 };
+      campaignData[key].leads++;
+      campaignData[key].guests += parseFloat(r['Quantity']) || 0;
+    });
+
+    filteredCalls.forEach(r => {
+      const campaign = r['Кампания'] || 'Не указано';
+      const source = r['Источник (utm)'] || 'Не указано';
+      const key = `${campaign}|||${source}`;
+      if (!campaignData[key]) campaignData[key] = { campaign, source, leads: 0, calls: 0, confirmed: 0, guests: 0 };
+      campaignData[key].calls++;
+      if ((r['Подтвержденный лид'] || '') === 'Да') campaignData[key].confirmed++;
+    });
+
+    const sorted = Object.values(campaignData).sort((a, b) => (b.leads + b.calls) - (a.leads + a.calls));
+    const totalCampaigns = sorted.length;
+    const topByLeads = [...sorted].sort((a, b) => b.leads - a.leads).slice(0, 10);
+    const topByCalls = [...sorted].sort((a, b) => b.calls - a.calls).slice(0, 10);
+
+    metricsContainer.innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Всего кампаний</div>
+        <div class="metric-value accent">${totalCampaigns}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ТОП кампания (лиды)</div>
+        <div class="metric-value blue" style="font-size:16px;word-break:break-word">${topByLeads[0]?.campaign || '—'}</div>
+        <div class="metric-sub">${topByLeads[0]?.leads || 0} лидов</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ТОП кампания (звонки)</div>
+        <div class="metric-value green" style="font-size:16px;word-break:break-word">${topByCalls[0]?.campaign || '—'}</div>
+        <div class="metric-sub">${topByCalls[0]?.calls || 0} звонков</div>
+      </div>
+    `;
+
+    destroyCharts(['topCampaignsLeads', 'topCampaignsCalls', 'campaignEfficiency', 'topContent']);
+
+    buildTopCampaignsLeadsChart(topByLeads);
+    buildTopCampaignsCallsChart(topByCalls);
+    buildCampaignEfficiencyChart(sorted.slice(0, 15));
+    buildTopContentChart();
+    buildCampaignsTable(sorted.slice(0, 50));
+  }
+
+  function buildTopCampaignsLeadsChart(data) {
+    const canvas = document.getElementById('chartTopCampaignsLeads');
+    if (!canvas || data.length === 0) return;
+    
+    charts.topCampaignsLeads = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.campaign.length > 30 ? d.campaign.slice(0, 30) + '...' : d.campaign),
+        datasets: [{
+          label: 'Лиды',
+          data: data.map(d => d.leads),
+          backgroundColor: COLORS.slice(0, data.length),
+          borderRadius: 8
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        ...barOptions(false),
+        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+      }
+    });
+  }
+
+  function buildTopCampaignsCallsChart(data) {
+    const canvas = document.getElementById('chartTopCampaignsCalls');
+    if (!canvas || data.length === 0) return;
+    
+    charts.topCampaignsCalls = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.campaign.length > 30 ? d.campaign.slice(0, 30) + '...' : d.campaign),
+        datasets: [{
+          label: 'Звонки',
+          data: data.map(d => d.calls),
+          backgroundColor: COLORS.slice(0, data.length).map(c => c.replace(')', ',.7)').replace('rgb', 'rgba')),
+          borderRadius: 8
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        ...barOptions(false),
+        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+      }
+    });
+  }
+
+  function buildCampaignEfficiencyChart(data) {
+    const canvas = document.getElementById('chartCampaignEfficiency');
+    if (!canvas) return;
+    
+    const withCalls = data.filter(d => d.calls >= 5);
+    const efficiency = withCalls.map(d => ({
+      name: d.campaign,
+      rate: d.calls > 0 ? Math.round(d.confirmed / d.calls * 100) : 0
+    })).sort((a, b) => b.rate - a.rate).slice(0, 10);
+
+    if (efficiency.length === 0) return;
+
+    charts.campaignEfficiency = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: efficiency.map(d => d.name.length > 20 ? d.name.slice(0, 20) + '...' : d.name),
+        datasets: [{
+          label: '% подтверждённых',
+          data: efficiency.map(d => d.rate),
+          backgroundColor: efficiency.map(d => d.rate >= 30 ? '#10b981' : d.rate >= 15 ? '#f59e0b' : '#ef4444'),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        ...barOptions(false),
+        plugins: { ...barOptions(false).plugins, legend: { display: false } },
+        scales: { x: { max: 100, grid: { color: '#2a2a35' }, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } }
+      }
+    });
+  }
+
+  function buildTopContentChart() {
+    const canvas = document.getElementById('chartTopContent');
+    if (!canvas) return;
+
+    const contentData = {};
+
+    filteredLeads.forEach(r => {
+      const content = r['utm_content'] || 'Не указано';
+      if (!contentData[content]) contentData[content] = { leads: 0, calls: 0 };
+      contentData[content].leads++;
+    });
+
+    filteredCalls.forEach(r => {
+      const content = r['Контент'] || 'Не указано';
+      if (!contentData[content]) contentData[content] = { leads: 0, calls: 0 };
+      contentData[content].calls++;
+    });
+
+    const sorted = Object.entries(contentData)
+      .sort((a, b) => (b[1].leads + b[1].calls) - (a[1].leads + a[1].calls))
+      .slice(0, 10);
+
+    if (sorted.length === 0) return;
+
+    charts.topContent = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(x => x[0].length > 15 ? x[0].slice(0, 15) + '...' : x[0]),
+        datasets: [
+          { label: 'Лиды', data: sorted.map(x => x[1].leads), backgroundColor: 'rgba(59,130,246,.7)', borderRadius: 4 },
+          { label: 'Звонки', data: sorted.map(x => x[1].calls), backgroundColor: 'rgba(16,185,129,.7)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        ...barOptions(true),
+        plugins: { ...barOptions(true).plugins, legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 11 }, color: '#a0a0b0' } } }
+      }
+    });
+  }
+
+  function buildCampaignsTable(data) {
+    const tbody = document.querySelector('#tableCampaignsFull tbody');
+    if (!tbody) return;
+
+    const totalAll = data.reduce((s, d) => s + d.leads + d.calls, 0);
+
+    tbody.innerHTML = data.map(d => {
+      const confirmRate = d.calls > 0 ? Math.round(d.confirmed / d.calls * 100) : 0;
+      const share = totalAll > 0 ? ((d.leads + d.calls) / totalAll * 100).toFixed(1) : 0;
+
+      let effBadge = 'badge-purple';
+      if (confirmRate >= 30) effBadge = 'badge-green';
+      else if (confirmRate >= 15) effBadge = 'badge-yellow';
+      else if (confirmRate < 10 && d.calls > 10) effBadge = 'badge-red';
+
+      return `<tr>
+        <td><span class="badge badge-orange" title="${escapeHtml(d.campaign)}">${escapeHtml(d.campaign.length > 25 ? d.campaign.slice(0, 25) + '...' : d.campaign)}</span></td>
+        <td>${escapeHtml(d.source)}</td>
+        <td>${fmtInt(d.leads)}</td>
+        <td>${fmtInt(d.calls)}</td>
+        <td>${fmtInt(d.confirmed)}</td>
+        <td>${confirmRate}%</td>
+        <td>${Math.round(d.guests)}</td>
+        <td><span class="badge ${effBadge}">${confirmRate >= 30 ? 'Отлично' : confirmRate >= 15 ? 'Хорошо' : confirmRate >= 5 ? 'Средне' : 'Слабо'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== OVERVIEW ======
+  function updateOverview(){
+    const totalLeads = filteredLeads.length;
+    const totalCalls = filteredCalls.length;
+    const totalAll   = totalLeads + totalCalls;
+
+    const guests = filteredLeads.reduce((s,r)=> s + (parseFloat(r['Quantity']) || 0), 0);
+
+    const uniqueCalls = filteredCalls.filter(r=>(r['Уникальное']||'')==='Новые').length;
+    const qualityCalls = filteredCalls.filter(r=>(r['Качественное']||'')==='Да').length;
+    const confirmedCalls = filteredCalls.filter(r=>(r['Подтвержденный лид']||'')==='Да').length;
+
+    // compare changes if enabled
+    let leadsChange=null, callsChange=null, allChange=null;
+    if(filters.compareEnabled){
+      const prevLeads = compareLeads.length;
+      const prevCalls = compareCalls.length;
+      const prevAll = prevLeads + prevCalls;
+
+      leadsChange = prevLeads>0 ? pct(totalLeads, prevLeads) : null;
+      callsChange = prevCalls>0 ? pct(totalCalls, prevCalls) : null;
+      allChange   = prevAll>0 ? pct(totalAll, prevAll) : null;
+    }
+
+    document.getElementById('overviewMetrics').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Всего обращений
+          <span class="info-icon" data-tt-title="Всего обращений" data-tt-text="Лиды (заявки с сайта) + звонки (Mango) в выбранном периоде после фильтров.">i</span>
+        </div>
+        <div class="metric-value accent">${fmtInt(totalAll)}</div>
+        ${allChange!==null ? `<div class="metric-change ${allChange>=0?'up':'down'}">${allChange>=0?'+':''}${allChange}%</div>`:''}
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Заявки с сайта
+          <span class="info-icon" data-tt-title="Заявки" data-tt-text="Заполненные формы с сайта (лист «Сборка Лиды сайт»).">i</span>
+        </div>
+        <div class="metric-value blue">${fmtInt(totalLeads)}</div>
+        ${leadsChange!==null ? `<div class="metric-change ${leadsChange>=0?'up':'down'}">${leadsChange>=0?'+':''}${leadsChange}%</div>`:''}
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Звонки (Mango)
+          <span class="info-icon" data-tt-title="Звонки Mango" data-tt-text="Все звонки из Mango (лист «Манго Телефония», Источник обращения = mango).">i</span>
+        </div>
+        <div class="metric-value green">${fmtInt(totalCalls)}</div>
+        ${callsChange!==null ? `<div class="metric-change ${callsChange>=0?'up':'down'}">${callsChange>=0?'+':''}${callsChange}%</div>`:''}
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Гостей (по заявкам)
+          <span class="info-icon" data-tt-title="Гостей" data-tt-text="Сумма Quantity по лидам. Это заявленное число гостей из формы, а не факт визита.">i</span>
+        </div>
+        <div class="metric-value purple">${fmtInt(Math.round(guests))}</div>
+        <div class="metric-sub">Ср. группа: <b>${totalLeads>0 ? (guests/totalLeads).toFixed(1) : '0.0'}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Уникальные звонки
+          <span class="info-icon" data-tt-title="Уникальные звонки" data-tt-text="Уникальные = Уникальное = «Новые». Обычно это первый звонок от номера/лида в периоде по логике Mango.">i</span>
+        </div>
+        <div class="metric-value yellow">${fmtInt(uniqueCalls)}</div>
+        <div class="metric-sub">Доля: <b>${totalCalls>0 ? Math.round(uniqueCalls/totalCalls*100) : 0}%</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Подтвержденные
+          <span class="info-icon" data-tt-title="Подтвержденные" data-tt-text="Подтвержденные лиды = «Подтвержденный лид» = «Да». Обычно подтверждение фиксируется менеджером/CRM.">i</span>
+        </div>
+        <div class="metric-value pink">${fmtInt(confirmedCalls)}</div>
+        <div class="metric-sub">От звонков: <b>${totalCalls>0 ? Math.round(confirmedCalls/totalCalls*100) : 0}%</b></div>
+      </div>
+    `;
+
+    // charts
+    destroyCharts([
+      'dailyAll','typeSplit','callFunnel','heatmap','sourcesTop',
+      'callsDaily','callsDuration','callsRegions','callsPlaceGuess',
+      'leadsDaily','leadsSources','leadsPlaces','leadsGroups','leadsDevices',
+      'sourcesCompare','mediumCompare','mom'
+    ]);
+
+    buildDailyAllChart();
+    buildTypeSplitChart(totalLeads, totalCalls);
+    buildCallFunnelChart(totalCalls, uniqueCalls, qualityCalls, confirmedCalls);
+    buildHeatmapChart(filteredCalls);
+    buildSourcesTopChart();
+    buildOverviewSourcesTable();
+  }
+
+  function buildDailyAllChart(){
+    // merge by day
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const d = (r['sent']||'').split(' ')[0];
+      if(!d) return;
+      if(!map[d]) map[d]={leads:0,calls:0};
+      map[d].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const d = parseCallDateISO(r['Время']||'');
+      if(!d) return;
+      if(!map[d]) map[d]={leads:0,calls:0};
+      map[d].calls++;
+    });
+
+    const arr = Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0]));
+    const sliced = arr.slice(-60); // last 60 days for readability
+
+    const labels = sliced.map(x=>x[0].slice(5));
+    const leadsData = sliced.map(x=>x[1].leads);
+    const callsData = sliced.map(x=>x[1].calls);
+
+    charts.dailyAll = new Chart(document.getElementById('chartDailyAll'),{
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {label:'Заявки', data:leadsData, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.10)', fill:true, tension:.35, pointRadius:2},
+          {label:'Звонки', data:callsData, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.10)', fill:true, tension:.35, pointRadius:2}
+        ]
+      },
+      options: baseLineOptions()
+    });
+  }
+
+  function buildTypeSplitChart(leads, calls){
+    charts.typeSplit = new Chart(document.getElementById('chartTypeSplit'),{
+      type:'doughnut',
+      data:{
+        labels:['Заявки','Звонки'],
+        datasets:[{data:[leads,calls], backgroundColor:['#3b82f6','#10b981'], borderWidth:0}]
+      },
+      options: donutOptions()
+    });
+  }
+
+  function buildCallFunnelChart(allCalls, uniqueCalls, qualityCalls, confirmedCalls){
+    // funnel as horizontal bar with conversion labels
+    const stages = [
+      {name:'Все звонки', val:allCalls},
+      {name:'Уникальные (Новые)', val:uniqueCalls},
+      {name:'Качественные (Да)', val:qualityCalls},
+      {name:'Подтвержденные (Да)', val:confirmedCalls},
+    ];
+    const labels = stages.map(s=>s.name);
+    const data = stages.map(s=>s.val);
+
+    charts.callFunnel = new Chart(document.getElementById('chartCallFunnel'),{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          label:'Количество',
+          data,
+          backgroundColor:['rgba(255,107,53,.75)','rgba(245,158,11,.75)','rgba(16,185,129,.75)','rgba(236,72,153,.75)'],
+          borderRadius:10
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            anchor:'end',
+            align:'right',
+            color:'#fff',
+            font:{weight:900},
+            formatter:(v,ctx)=>{
+              const i = ctx.dataIndex;
+              const prev = i===0 ? null : data[i-1];
+              const conv = (prev && prev>0) ? Math.round(v/prev*100) : null;
+              return conv===null ? `${v}` : `${v}  ·  ${conv}%`;
+            }
+          },
+          tooltip:{
+            callbacks:{
+              label:(ctx)=>{
+                const i = ctx.dataIndex;
+                const prev = i===0 ? null : data[i-1];
+                const conv = (prev && prev>0) ? (ctx.parsed.x/prev*100).toFixed(1)+'%' : '';
+                return ` ${ctx.parsed.x}${conv?` (конверсия от предыдущего: ${conv})`:''}`;
+              }
+            }
+          }
+        },
+        scales:{
+          x:{beginAtZero:true, grid:{color:'#2a2a35'}},
+          y:{grid:{display:false}, ticks:{color:'#a0a0b0', font:{weight:900}}}
+        }
+      }
+    });
+  }
+
+  function buildHeatmapChart(calls){
+    // Heatmap: x=hour (0-23), y=weekday (Mon-Sun)
+    // We'll use matrix chart (chartjs-chart-matrix)
+    const weekdayLabels = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const counts = {}; // key `${wd}-${h}`
+    let max = 1;
+
+    calls.forEach(r=>{
+      const dt = parseCallDateTime(r['Время']||'');
+      if(!dt) return;
+      const wd = weekdayIndexMon0(dt); // 0..6
+      const h = dt.getHours();
+      const k = wd+'-'+h;
+      counts[k] = (counts[k]||0)+1;
+      if(counts[k]>max) max=counts[k];
+    });
+
+    const data = [];
+    for(let wd=0; wd<7; wd++){
+      for(let h=0; h<24; h++){
+        const v = counts[wd+'-'+h] || 0;
+        data.push({x:h, y:wd, v});
+      }
+    }
+
+    // color scale
+    const cellBg = (v)=>{
+      if(max<=0) return 'rgba(59,130,246,.05)';
+      const t = v/max; // 0..1
+      const alpha = 0.08 + t*0.85;
+      return `rgba(16,185,129,${alpha.toFixed(3)})`;
+    };
+
+    charts.heatmap = new Chart(document.getElementById('chartHeatmap'),{
+      type:'matrix',
+      data:{
+        datasets:[{
+          label:'Звонки',
+          data,
+          backgroundColor:(ctx)=>{
+            const v = ctx.raw?.v ?? 0;
+            return cellBg(v);
+          },
+          borderWidth:1,
+          borderColor:'#1a1a24',
+          width: (ctx)=> {
+            const a = ctx.chart.chartArea;
+            return a ? (a.width / 24) - 2 : 10;
+          },
+          height:(ctx)=>{
+            const a = ctx.chart.chartArea;
+            return a ? (a.height / 7) - 2 : 10;
+          }
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            color:'#ffffff',
+            font:{weight:900,size:11},
+            formatter:(v,ctx)=>{
+              const val = ctx.raw?.v ?? 0;
+              return val>0 ? val : '';
+            }
+          },
+          tooltip:{
+            callbacks:{
+              title:(items)=>{
+                const it = items[0].raw;
+                return `${weekdayLabels[it.y]} · ${String(it.x).padStart(2,'0')}:00`;
+              },
+              label:(item)=>`Звонков: ${item.raw.v}`
+            }
+          }
+        },
+        scales:{
+          x:{
+            type:'linear',
+            min:0,max:23,
+            ticks:{
+              stepSize:1,
+              callback:(v)=> (v%2===0 ? String(v).padStart(2,'0') : '')
+            },
+            grid:{display:false}
+          },
+          y:{
+            type:'linear',
+            min:0,max:6,
+            ticks:{
+              stepSize:1,
+              callback:(v)=> weekdayLabels[v] ?? ''
+            },
+            grid:{display:false}
+          }
+        }
+      }
+    });
+  }
+
+  function buildSourcesTopChart(){
+    // Top sources by total (leads+calls)
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!map[s]) map[s]={leads:0,calls:0,confirmed:0};
+      map[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!map[s]) map[s]={leads:0,calls:0,confirmed:0};
+      map[s].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') map[s].confirmed++;
+    });
+
+    const arr = Object.entries(map)
+      .sort((a,b)=>(b[1].leads+b[1].calls)-(a[1].leads+a[1].calls))
+      .slice(0,12);
+
+    const labels = arr.map(x=>x[0]);
+    const leadsData = arr.map(x=>x[1].leads);
+    const callsData = arr.map(x=>x[1].calls);
+    const confData = arr.map(x=>x[1].confirmed);
+
+    charts.sourcesTop = new Chart(document.getElementById('chartSourcesTop'),{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[
+          {label:'Лиды', data:leadsData, backgroundColor:'rgba(59,130,246,.85)', borderRadius:8, borderWidth:0},
+          {label:'Звонки', data:callsData, backgroundColor:'rgba(16,185,129,.85)', borderRadius:8, borderWidth:0},
+          {label:'Подтверж.', data:confData, backgroundColor:'rgba(236,72,153,.85)', borderRadius:8, borderWidth:0}
+        ]
+      },
+      options:{
+        ...barOptions(true),
+        plugins:{
+          ...barOptions(true).plugins,
+          legend:{display:true, position:'top', labels:{boxWidth:14, padding:12, font:{size:13,weight:900}, color:'#ffffff'}},
+          title:{
+            display:true,
+            text:'ТОП-12 источников трафика',
+            color:'#ffffff',
+            font:{size:14,weight:900},
+            padding:{bottom:20}
+          }
+        }
+      }
+    });
+  }
+
+  function buildOverviewSourcesTable(){
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!map[s]) map[s]={leads:0,calls:0,conf:0};
+      map[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!map[s]) map[s]={leads:0,calls:0,conf:0};
+      map[s].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') map[s].conf++;
+    });
+
+    const arr = Object.entries(map)
+      .sort((a,b)=>(b[1].leads+b[1].calls)-(a[1].leads+a[1].calls))
+      .slice(0,20);
+
+    const total = filteredLeads.length + filteredCalls.length;
+    const maxAll = arr[0] ? (arr[0][1].leads+arr[0][1].calls) : 1;
+
+    document.querySelector('#tableOverviewSources tbody').innerHTML = arr.map(([name,d])=>{
+      const all = d.leads + d.calls;
+      const share = total>0 ? (all/total*100).toFixed(1) : '0.0';
+      return `<tr>
+        <td><span class="badge badge-orange">${escapeHtml(name)}</span></td>
+        <td>${d.leads}</td>
+        <td>${d.calls}</td>
+        <td>${d.conf}</td>
+        <td><b>${all}</b></td>
+        <td>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${(all/maxAll*100).toFixed(1)}%;background:var(--accent)"></div>
+          </div>
+          <div style="margin-top:6px;color:var(--text3);font-size:12px;font-weight:800">${share}%</div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== CALLS TAB ======
+  function updateCalls(){
+    const t = filteredCalls.length;
+    const unique = filteredCalls.filter(r=>(r['Уникальное']||'')==='Новые').length;
+    const quality = filteredCalls.filter(r=>(r['Качественное']||'')==='Да').length;
+    const confirmed = filteredCalls.filter(r=>(r['Подтвержденный лид']||'')==='Да').length;
+
+    const durArr = filteredCalls.map(r=>parseInt(r['Длительность']||'0',10)||0);
+    const avgDur = durArr.length ? durArr.reduce((a,b)=>a+b,0)/durArr.length : 0;
+    const dropped = durArr.filter(x=>x===0).length;
+
+    // repeat callers
+    const phoneCounts = {};
+    filteredCalls.forEach(r=>{
+      const p = (r['Номер клиента']||'').trim() || 'Не указан';
+      if(!phoneCounts[p]) phoneCounts[p]={count:0,unique:0,qual:0,conf:0,dur:0};
+      phoneCounts[p].count++;
+      if((r['Уникальное']||'')==='Новые') phoneCounts[p].unique++;
+      if((r['Качественное']||'')==='Да') phoneCounts[p].qual++;
+      if((r['Подтвержденный лид']||'')==='Да') phoneCounts[p].conf++;
+      phoneCounts[p].dur += (parseInt(r['Длительность']||'0',10)||0);
+    });
+
+    const repeatPhones = Object.entries(phoneCounts).filter(([p,d])=>p!=='Не указан' && d.count>1).length;
+
+    document.getElementById('callsMetrics').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Звонков
+          <span class="info-icon" data-tt-title="Звонков" data-tt-text="Все звонки Mango в выбранном периоде после фильтров.">i</span>
+        </div>
+        <div class="metric-value accent">${fmtInt(t)}</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Уникальных
+          <span class="info-icon" data-tt-title="Уникальные звонки" data-tt-text="Уникальные = поле «Уникальное» = «Новые». Обычно это первый звонок от номера в периоде (логика Mango).">i</span>
+        </div>
+        <div class="metric-value green">${fmtInt(unique)}</div>
+        <div class="metric-sub">Доля: <b>${t>0 ? Math.round(unique/t*100) : 0}%</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Качественных
+          <span class="info-icon" data-tt-title="Качественные звонки" data-tt-text="Качественные = «Качественное» = «Да». Это готовая оценка Mango (обычно учитывает длительность/не сброшен/интерес).">i</span>
+        </div>
+        <div class="metric-value blue">${t>0 ? Math.round(quality/t*100) : 0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(quality)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Подтвержденных
+          <span class="info-icon" data-tt-title="Подтвержденный лид" data-tt-text="Подтвержденные = «Подтвержденный лид» = «Да». Это то, что ближе всего к бизнес-результату (квалификация менеджером/CRM).">i</span>
+        </div>
+        <div class="metric-value purple">${t>0 ? Math.round(confirmed/t*100) : 0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(confirmed)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Ср. длительность
+          <span class="info-icon" data-tt-title="Средняя длительность" data-tt-text="Среднее значение поля «Длительность» (сек) по выбранным звонкам.">i</span>
+        </div>
+        <div class="metric-value yellow">${fmtInt(Math.round(avgDur))} сек</div>
+        <div class="metric-sub">Сброшено (0 сек): <b>${fmtInt(dropped)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Повторных номеров
+          <span class="info-icon" data-tt-title="Повторные звонки" data-tt-text="Показывает, сколько номеров позвонили 2+ раза в периоде. Это индикатор качества обработки/перезвона/не дозвонились/вопросов.">i</span>
+        </div>
+        <div class="metric-value pink">${fmtInt(repeatPhones)}</div>
+        <div class="metric-sub">Доля: <b>${Object.keys(phoneCounts).length>0 ? Math.round(repeatPhones/Object.keys(phoneCounts).length*100) : 0}%</b></div>
+      </div>
+    `;
+
+    // calls daily
+    buildCallsDailyChart();
+    buildCallsDurationChart();
+    buildCallsRegionsChart();
+    buildCallsPlaceGuessChart();
+    buildRepeatCallsTable(phoneCounts);
+  }
+
+  function buildCallsDailyChart(){
+    const daily = {};
+    filteredCalls.forEach(r=>{
+      const d = parseCallDateISO(r['Время']||'');
+      if(!d) return;
+      daily[d] = (daily[d]||0)+1;
+    });
+    const arr = Object.entries(daily).sort((a,b)=>a[0].localeCompare(b[0])).slice(-45);
+
+    charts.callsDaily = new Chart(document.getElementById('chartCallsDaily'),{
+      type:'bar',
+      data:{
+        labels:arr.map(x=>x[0].slice(5)),
+        datasets:[{label:'Звонки', data:arr.map(x=>x[1]), backgroundColor:'rgba(16,185,129,.75)', borderRadius:10}]
+      },
+      options: barOptions(false)
+    });
+  }
+
+  function buildCallsDurationChart(){
+    const buckets = {'0 сек':0,'1–30':0,'31–60':0,'1–2 мин':0,'2–5 мин':0,'5+ мин':0};
+    filteredCalls.forEach(r=>{
+      const d = parseInt(r['Длительность']||'0',10)||0;
+      if(d===0) buckets['0 сек']++;
+      else if(d<=30) buckets['1–30']++;
+      else if(d<=60) buckets['31–60']++;
+      else if(d<=120) buckets['1–2 мин']++;
+      else if(d<=300) buckets['2–5 мин']++;
+      else buckets['5+ мин']++;
+    });
+
+    charts.callsDuration = new Chart(document.getElementById('chartCallsDuration'),{
+      type:'bar',
+      data:{
+        labels:Object.keys(buckets),
+        datasets:[{data:Object.values(buckets), backgroundColor:'rgba(245,158,11,.75)', borderRadius:10}]
+      },
+      options: barOptions(false)
+    });
+  }
+
+  function buildCallsRegionsChart(){
+    const map = {};
+    filteredCalls.forEach(r=>{
+      const reg = r['Регион'] || 'Не указано';
+      map[reg] = (map[reg]||0)+1;
+    });
+    const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    charts.callsRegions = new Chart(document.getElementById('chartCallsRegions'),{
+      type:'doughnut',
+      data:{labels:arr.map(x=>x[0]), datasets:[{data:arr.map(x=>x[1]), backgroundColor:COLORS, borderWidth:0}]},
+      options: donutOptions()
+    });
+  }
+
+  function buildCallsPlaceGuessChart(){
+    // heuristic: determine Nevsky / Rubinshteina by URL/Content/Campaign
+    const map = { 'Невский':0, 'Рубинштейна':0, 'Не определено':0 };
+    filteredCalls.forEach(r=>{
+      const place = guessCallPlace(r);
+      map[place] = (map[place]||0)+1;
+    });
+
+    charts.callsPlaceGuess = new Chart(document.getElementById('chartCallsPlaceGuess'),{
+      type:'bar',
+      data:{
+        labels:Object.keys(map),
+        datasets:[{data:Object.values(map), backgroundColor:['rgba(59,130,246,.75)','rgba(255,107,53,.75)','rgba(160,160,176,.25)'], borderRadius:10}]
+      },
+      options:{
+        ...barOptions(false),
+        plugins:{
+          ...barOptions(false).plugins,
+          tooltip:{
+            callbacks:{
+              label:(ctx)=>{
+                const lbl = ctx.label;
+                if(lbl==='Не определено'){
+                  return ` ${ctx.parsed.y ?? ctx.parsed} — нет явных маркеров в URL/кампании/контенте`;
+                }
+                return ` ${ctx.parsed.y ?? ctx.parsed} — определено по URL/utm_content/utm_campaign`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function buildRepeatCallsTable(phoneCounts){
+    const arr = Object.entries(phoneCounts)
+      .filter(([p])=>p && p!=='Не указан')
+      .sort((a,b)=>b[1].count - a[1].count)
+      .slice(0,20);
+
+    document.querySelector('#tableRepeatCalls tbody').innerHTML = arr.map(([phone,d])=>{
+      const avg = d.count>0 ? Math.round(d.dur/d.count) : 0;
+      return `<tr>
+        <td><span class="badge badge-blue">${escapeHtml(phone)}</span></td>
+        <td><b>${d.count}</b></td>
+        <td>${d.unique}</td>
+        <td>${d.qual}</td>
+        <td>${d.conf}</td>
+        <td>${avg} сек</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== LEADS TAB ======
+  function updateLeads(){
+    const t = filteredLeads.length;
+    const guests = filteredLeads.reduce((s,r)=>s+(parseFloat(r['Quantity'])||0),0);
+    const paid = filteredLeads.filter(r=>(r['utm_medium']||'')==='cpc').length;
+    const mobile = filteredLeads.filter(r=>(r['device_type']||'')==='mobile').length;
+
+    // place share for nevsky/rubin if exists
+    const nev = filteredLeads.filter(r=>String(r['evgenich_place']||'').toLowerCase().includes('нев')).length;
+    const rub = filteredLeads.filter(r=>String(r['evgenich_place']||'').toLowerCase().includes('руб')).length;
+
+    document.getElementById('leadsMetrics').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Заявок
+          <span class="info-icon" data-tt-title="Заявки" data-tt-text="Заполненные формы с сайта (лист «Сборка Лиды сайт»).">i</span>
+        </div>
+        <div class="metric-value accent">${fmtInt(t)}</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Гостей
+          <span class="info-icon" data-tt-title="Гостей" data-tt-text="Сумма Quantity по заявкам. Это намерение из формы.">i</span>
+        </div>
+        <div class="metric-value purple">${fmtInt(Math.round(guests))}</div>
+        <div class="metric-sub">Ср. группа: <b>${t>0?(guests/t).toFixed(1):'0.0'}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Платный трафик
+          <span class="info-icon" data-tt-title="Платный трафик" data-tt-text="Доля заявок, где utm_medium = cpc.">i</span>
+        </div>
+        <div class="metric-value blue">${t>0?Math.round(paid/t*100):0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(paid)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Mobile
+          <span class="info-icon" data-tt-title="Mobile" data-tt-text="Доля заявок с device_type = mobile.">i</span>
+        </div>
+        <div class="metric-value green">${t>0?Math.round(mobile/t*100):0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(mobile)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Невский
+          <span class="info-icon" data-tt-title="Невский" data-tt-text="Доля заявок с evgenich_place, содержащим «Нев».">i</span>
+        </div>
+        <div class="metric-value yellow">${t>0?Math.round(nev/t*100):0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(nev)}</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Рубинштейна
+          <span class="info-icon" data-tt-title="Рубинштейна" data-tt-text="Доля заявок с evgenich_place, содержащим «Руб».">i</span>
+        </div>
+        <div class="metric-value pink">${t>0?Math.round(rub/t*100):0}%</div>
+        <div class="metric-sub">Штук: <b>${fmtInt(rub)}</b></div>
+      </div>
+    `;
+
+    buildLeadsDailyChart();
+    buildLeadsSourcesChart();
+    buildLeadsPlacesChart();
+    buildLeadsGroupsChart();
+    buildLeadsDevicesChart();
+    buildLeadsCampaignsTable();
+  }
+
+  function buildLeadsDailyChart(){
+    const daily = {};
+    filteredLeads.forEach(r=>{
+      const d = (r['sent']||'').split(' ')[0];
+      if(!d) return;
+      daily[d] = (daily[d]||0)+1;
+    });
+    const arr = Object.entries(daily).sort((a,b)=>a[0].localeCompare(b[0])).slice(-45);
+
+    charts.leadsDaily = new Chart(document.getElementById('chartLeadsDaily'),{
+      type:'bar',
+      data:{labels:arr.map(x=>x[0].slice(5)), datasets:[{data:arr.map(x=>x[1]), backgroundColor:'rgba(59,130,246,.75)', borderRadius:10}]},
+      options: barOptions(false)
+    });
+  }
+
+  function buildLeadsSourcesChart(){
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      map[s]=(map[s]||0)+1;
+    });
+    const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    charts.leadsSources = new Chart(document.getElementById('chartLeadsSources'),{
+      type:'doughnut',
+      data:{labels:arr.map(x=>x[0]), datasets:[{data:arr.map(x=>x[1]), backgroundColor:COLORS, borderWidth:0}]},
+      options: donutOptions()
+    });
+  }
+
+  function buildLeadsPlacesChart(){
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const p = r['evgenich_place'] || 'Не указано';
+      map[p]=(map[p]||0)+1;
+    });
+    const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    charts.leadsPlaces = new Chart(document.getElementById('chartLeadsPlaces'),{
+      type:'doughnut',
+      data:{labels:arr.map(x=>x[0]), datasets:[{data:arr.map(x=>x[1]), backgroundColor:COLORS, borderWidth:0}]},
+      options: donutOptions()
+    });
+  }
+
+  function buildLeadsGroupsChart(){
+    const buckets = {'1–2':0,'3–4':0,'5–6':0,'7–10':0,'10+':0};
+    filteredLeads.forEach(r=>{
+      const q = parseFloat(r['Quantity']||'0')||0;
+      if(q<=2) buckets['1–2']++;
+      else if(q<=4) buckets['3–4']++;
+      else if(q<=6) buckets['5–6']++;
+      else if(q<=10) buckets['7–10']++;
+      else buckets['10+']++;
+    });
+
+    charts.leadsGroups = new Chart(document.getElementById('chartLeadsGroups'),{
+      type:'bar',
+      data:{labels:Object.keys(buckets), datasets:[{data:Object.values(buckets), backgroundColor:'rgba(139,92,246,.75)', borderRadius:10}]},
+      options: barOptions(false)
+    });
+  }
+
+  function buildLeadsDevicesChart(){
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const d = r['device_type'] || 'Не указано';
+      map[d]=(map[d]||0)+1;
+    });
+    const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    charts.leadsDevices = new Chart(document.getElementById('chartLeadsDevices'),{
+      type:'doughnut',
+      data:{labels:arr.map(x=>x[0]), datasets:[{data:arr.map(x=>x[1]), backgroundColor:COLORS, borderWidth:0}]},
+      options: donutOptions()
+    });
+  }
+
+  function buildLeadsCampaignsTable(){
+    const map = {};
+    filteredLeads.forEach(r=>{
+      const c = r['utm_campaign'] || 'Не указано';
+      if(!map[c]) map[c]={count:0, guests:0};
+      map[c].count++;
+      map[c].guests += (parseFloat(r['Quantity']||'0')||0);
+    });
+
+    const arr = Object.entries(map).sort((a,b)=>b[1].count - a[1].count).slice(0,20);
+    const max = arr[0]?.[1].count || 1;
+
+    document.querySelector('#tableLeadsCampaigns tbody').innerHTML = arr.map(([name,d])=>{
+      const avg = d.count>0 ? (d.guests/d.count).toFixed(1) : '0.0';
+      return `<tr>
+        <td><span class="badge badge-green">${escapeHtml(shorten(name,36))}</span></td>
+        <td><b>${d.count}</b></td>
+        <td>${fmtInt(Math.round(d.guests))}</td>
+        <td>${avg}</td>
+        <td>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${(d.count/max*100).toFixed(1)}%;background:var(--green)"></div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== CONVERSIONS TAB ======
+  function updateConversions(){
+    const totalLeads = filteredLeads.length;
+    const totalCalls = filteredCalls.length;
+    const confirmed = filteredCalls.filter(r=>(r['Подтвержденный лид']||'')==='Да').length;
+    
+    const conversionRate = totalLeads > 0 ? (confirmed / totalLeads * 100) : 0;
+    const avgQualityScore = totalCalls > 0 ? (confirmed / totalCalls * 100) : 0;
+    
+    // Best source by conversion
+    const sourceStats = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0,conf:0};
+      sourceStats[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0,conf:0};
+      sourceStats[s].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') sourceStats[s].conf++;
+    });
+    
+    let bestSource = {name:'—', rate:0};
+    Object.entries(sourceStats).forEach(([name,data])=>{
+      const total = data.leads + data.calls;
+      if(total >= 5){
+        const rate = total > 0 ? (data.conf / total * 100) : 0;
+        if(rate > bestSource.rate){
+          bestSource = {name, rate};
+        }
+      }
+    });
+
+    document.getElementById('conversionsMetrics').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Конверсия лид→подтв
+          <span class="info-icon" data-tt-title="Общая конверсия" data-tt-text="Процент лидов, которые превратились в подтвержденные звонки.">i</span>
+        </div>
+        <div class="metric-value green">${conversionRate.toFixed(1)}%</div>
+        <div class="metric-sub">Из ${totalLeads} лидов → ${confirmed} подтв.</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Средний Quality Score
+          <span class="info-icon" data-tt-title="Quality Score" data-tt-text="Процент подтвержденных звонков от общего числа звонков.">i</span>
+        </div>
+        <div class="metric-value blue">${avgQualityScore.toFixed(1)}%</div>
+        <div class="metric-sub">${confirmed} из ${totalCalls} звонков</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Лучший источник
+          <span class="info-icon" data-tt-title="Лучший источник" data-tt-text="Источник с наибольшим процентом подтвержденных обращений (минимум 5 обращений).">i</span>
+        </div>
+        <div class="metric-value accent">${escapeHtml(shorten(bestSource.name,15))}</div>
+        <div class="metric-sub">Конверсия: ${bestSource.rate.toFixed(1)}%</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">ROI эффективность
+          <span class="info-icon" data-tt-title="ROI показатель" data-tt-text="Комбинированный показатель: объем × качество.">i</span>
+        </div>
+        <div class="metric-value purple">${Math.round((totalLeads+totalCalls)*conversionRate/100)}</div>
+        <div class="metric-sub">Потенциал роста: <b>${Math.round((totalLeads+totalCalls)*(1-conversionRate/100))}</b></div>
+      </div>
+    `;
+
+    buildConversionFunnelChart();
+    buildCorrelationChart();
+    buildConversionByDayChart();
+    buildConversionTrendChart();
+    buildConversionBySourceTable();
+  }
+
+  function buildConversionFunnelChart(){
+    const totalLeads = filteredLeads.length;
+    const totalCalls = filteredCalls.length;
+    const uniqueCalls = filteredCalls.filter(r=>(r['Уникальное']||'')==='Новые').length;
+    const qualityCalls = filteredCalls.filter(r=>(r['Качественное']||'')==='Да').length;
+    const confirmed = filteredCalls.filter(r=>(r['Подтвержденный лид']||'')==='Да').length;
+
+    const stages = [
+      {name:'Лиды с сайта', val:totalLeads},
+      {name:'Звонки (все)', val:totalCalls},
+      {name:'Уникальные звонки', val:uniqueCalls},
+      {name:'Качественные', val:qualityCalls},
+      {name:'Подтвержденные', val:confirmed}
+    ];
+
+    charts.conversionFunnel = new Chart(document.getElementById('chartConversionFunnel'),{
+      type:'bar',
+      data:{
+        labels:stages.map(s=>s.name),
+        datasets:[{
+          label:'Количество',
+          data:stages.map(s=>s.val),
+          backgroundColor:['rgba(59,130,246,.85)','rgba(16,185,129,.85)','rgba(245,158,11,.85)','rgba(139,92,246,.85)','rgba(236,72,153,.85)'],
+          borderRadius:8
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            anchor:'end',
+            align:'right',
+            color:'#ffffff',
+            font:{weight:900,size:12},
+            formatter:(v,ctx)=>{
+              const i = ctx.dataIndex;
+              if(i===0) return v;
+              const prev = stages[i-1].val;
+              const conv = prev > 0 ? ((v/prev)*100).toFixed(1) : 0;
+              return `${v}  (${conv}%)`;
+            }
+          },
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            callbacks:{
+              label:(ctx)=>{
+                const i = ctx.dataIndex;
+                if(i===0) return ` ${ctx.parsed.x}`;
+                const prev = stages[i-1].val;
+                const conv = prev > 0 ? ((ctx.parsed.x/prev)*100).toFixed(1) : 0;
+                return ` ${ctx.parsed.x} (конверсия: ${conv}%)`;
+              }
+            }
+          }
+        },
+        scales:{
+          x:{beginAtZero:true, grid:{color:'rgba(42,42,53,.5)'}, ticks:{color:'#a0a0b0'}},
+          y:{grid:{display:false}, ticks:{color:'#ffffff',font:{weight:900}}}
+        }
+      }
+    });
+  }
+
+  function buildCorrelationChart(){
+    const sourceStats = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0};
+      sourceStats[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0};
+      sourceStats[s].calls++;
+    });
+
+    const data = Object.entries(sourceStats)
+      .filter(([_,d])=>(d.leads+d.calls)>=3)
+      .map(([name,d])=>({x:d.leads, y:d.calls, label:name}))
+      .slice(0,15);
+
+    charts.correlation = new Chart(document.getElementById('chartCorrelation'),{
+      type:'scatter',
+      data:{
+        datasets:[{
+          label:'Источники',
+          data,
+          backgroundColor:'rgba(255,107,53,.7)',
+          borderColor:'rgba(255,107,53,1)',
+          borderWidth:2,
+          pointRadius:6,
+          pointHoverRadius:8
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            callbacks:{
+              title:(items)=> items[0].raw.label,
+              label:(item)=> `Лиды: ${item.parsed.x} | Звонки: ${item.parsed.y}`
+            }
+          }
+        },
+        scales:{
+          x:{
+            title:{display:true, text:'Лиды', color:'#a0a0b0', font:{size:12,weight:700}},
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0'}
+          },
+          y:{
+            title:{display:true, text:'Звонки', color:'#a0a0b0', font:{size:12,weight:700}},
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0'}
+          }
+        }
+      }
+    });
+  }
+
+  function buildConversionByDayChart(){
+    const byDay = {};
+    filteredLeads.forEach(r=>{
+      const dt = parseCallDateTime(r['sent']||'');
+      if(!dt) return;
+      const wd = weekdayIndexMon0(dt);
+      if(!byDay[wd]) byDay[wd]={leads:0,conf:0};
+      byDay[wd].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const dt = parseCallDateTime(r['Время']||'');
+      if(!dt) return;
+      const wd = weekdayIndexMon0(dt);
+      if(!byDay[wd]) byDay[wd]={leads:0,conf:0};
+      if((r['Подтвержденный лид']||'')==='Да') byDay[wd].conf++;
+    });
+
+    const labels = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const convData = labels.map((_,i)=>{
+      const d = byDay[i];
+      if(!d || d.leads===0) return 0;
+      return (d.conf / d.leads * 100).toFixed(1);
+    });
+
+    charts.conversionByDay = new Chart(document.getElementById('chartConversionByDay'),{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          label:'Конверсия %',
+          data:convData,
+          backgroundColor:'rgba(16,185,129,.85)',
+          borderRadius:8
+        }]
+      },
+      options:{
+        ...barOptions(false),
+        plugins:{
+          ...barOptions(false).plugins,
+          datalabels:{
+            color:'#ffffff',
+            font:{size:11,weight:900},
+            formatter:(v)=>v>0?v+'%':''
+          }
+        },
+        scales:{
+          y:{
+            beginAtZero:true,
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0', callback:(v)=>v+'%'}
+          },
+          x:{grid:{display:false}, ticks:{color:'#a0a0b0',font:{weight:700}}}
+        }
+      }
+    });
+  }
+
+  function buildConversionTrendChart(){
+    const daily = {};
+    filteredLeads.forEach(r=>{
+      const d = (r['sent']||'').split(' ')[0];
+      if(!d) return;
+      if(!daily[d]) daily[d]={leads:0,conf:0};
+      daily[d].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const d = parseCallDateISO(r['Время']||'');
+      if(!d) return;
+      if(!daily[d]) daily[d]={leads:0,conf:0};
+      if((r['Подтвержденный лид']||'')==='Да') daily[d].conf++;
+    });
+
+    const arr = Object.entries(daily).sort((a,b)=>a[0].localeCompare(b[0])).slice(-30);
+    const labels = arr.map(x=>x[0].slice(5));
+    const leadsData = arr.map(x=>x[1].leads);
+    const convData = arr.map(x=>{
+      const l = x[1].leads;
+      return l > 0 ? (x[1].conf / l * 100) : 0;
+    });
+
+    charts.conversionTrend = new Chart(document.getElementById('chartConversionTrend'),{
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {
+            label:'Лиды',
+            data:leadsData,
+            borderColor:'rgba(59,130,246,1)',
+            backgroundColor:'rgba(59,130,246,.1)',
+            fill:true,
+            tension:.4,
+            yAxisID:'y',
+            pointRadius:3
+          },
+          {
+            label:'Конверсия %',
+            data:convData,
+            borderColor:'rgba(16,185,129,1)',
+            backgroundColor:'rgba(16,185,129,.1)',
+            fill:true,
+            tension:.4,
+            yAxisID:'y1',
+            pointRadius:3
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true, position:'top', labels:{color:'#ffffff',font:{size:12,weight:900}}},
+          datalabels:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            mode:'index',
+            intersect:false
+          }
+        },
+        scales:{
+          y:{
+            type:'linear',
+            position:'left',
+            title:{display:true, text:'Лиды', color:'#a0a0b0'},
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0'}
+          },
+          y1:{
+            type:'linear',
+            position:'right',
+            title:{display:true, text:'Конверсия %', color:'#a0a0b0'},
+            grid:{display:false},
+            ticks:{color:'#a0a0b0', callback:(v)=>v+'%'}
+          },
+          x:{grid:{display:false}, ticks:{color:'#a0a0b0'}}
+        }
+      }
+    });
+  }
+
+  function buildConversionBySourceTable(){
+    const sourceStats = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0,conf:0};
+      sourceStats[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={leads:0,calls:0,conf:0};
+      sourceStats[s].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') sourceStats[s].conf++;
+    });
+
+    const arr = Object.entries(sourceStats)
+      .map(([name,d])=>{
+        const leadToCall = d.leads > 0 ? (d.calls / d.leads * 100) : 0;
+        const callToConf = d.calls > 0 ? (d.conf / d.calls * 100) : 0;
+        const total = d.leads + d.calls;
+        const qualityScore = total > 0 ? (d.conf / total * 100) : 0;
+        return {name, ...d, leadToCall, callToConf, qualityScore};
+      })
+      .sort((a,b)=>b.qualityScore - a.qualityScore)
+      .slice(0,20);
+
+    document.querySelector('#tableConversionBySource tbody').innerHTML = arr.map(r=>{
+      const qsClass = r.qualityScore >= 15 ? 'badge-green' : r.qualityScore >= 10 ? 'badge-blue' : r.qualityScore >= 5 ? 'badge-yellow' : 'badge-red';
+      return `<tr>
+        <td><span class="badge badge-orange">${escapeHtml(r.name)}</span></td>
+        <td>${r.leads}</td>
+        <td>${r.calls}</td>
+        <td><b>${r.conf}</b></td>
+        <td>${r.leadToCall.toFixed(1)}%</td>
+        <td>${r.callToConf.toFixed(1)}%</td>
+        <td><span class="badge ${qsClass}">${r.qualityScore.toFixed(1)}%</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== QUALITY TAB ======
+  function updateQuality(){
+    const sourceStats = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={total:0,conf:0};
+      sourceStats[s].total++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!sourceStats[s]) sourceStats[s]={total:0,conf:0};
+      sourceStats[s].total++;
+      if((r['Подтвержденный лид']||'')==='Да') sourceStats[s].conf++;
+    });
+
+    const sources = Object.entries(sourceStats).map(([name,d])=>{
+      const qs = d.total > 0 ? (d.conf / d.total * 100) : 0;
+      const category = qs >= 15 ? 'Отлично' : qs >= 10 ? 'Хорошо' : qs >= 5 ? 'Средне' : 'Плохо';
+      return {name, ...d, qs, category};
+    });
+
+    const avgQS = sources.length > 0 ? (sources.reduce((s,r)=>s+r.qs,0) / sources.length) : 0;
+    const excellent = sources.filter(r=>r.category==='Отлично').length;
+    const needOptimization = sources.filter(r=>r.category==='Плохо'||r.category==='Средне').length;
+    const potential = sources.reduce((s,r)=> s + (r.total - r.conf), 0);
+
+    document.getElementById('qualityMetrics').innerHTML = `
+      <div class="metric">
+        <div class="metric-label">Средний Quality Score
+          <span class="info-icon" data-tt-title="Quality Score" data-tt-text="Средний процент подтвержденных обращений по всем источникам.">i</span>
+        </div>
+        <div class="metric-value green">${avgQS.toFixed(1)}%</div>
+        <div class="metric-sub">По ${sources.length} источникам</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Отличных источников
+          <span class="info-icon" data-tt-title="Отличные" data-tt-text="Источники с Quality Score >= 15%.">i</span>
+        </div>
+        <div class="metric-value blue">${excellent}</div>
+        <div class="metric-sub">Доля: <b>${sources.length>0?(excellent/sources.length*100).toFixed(1):0}%</b></div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Требуют оптимизации
+          <span class="info-icon" data-tt-title="Оптимизация" data-tt-text="Источники с Quality Score < 10%.">i</span>
+        </div>
+        <div class="metric-value yellow">${needOptimization}</div>
+        <div class="metric-sub">Потенциал улучшения</div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-label">Потенциал роста
+          <span class="info-icon" data-tt-title="Потенциал" data-tt-text="Сколько обращений можно конвертировать при оптимизации.">i</span>
+        </div>
+        <div class="metric-value purple">${potential}</div>
+        <div class="metric-sub">Неконвертированных обращений</div>
+      </div>
+    `;
+
+    buildQualityRatingChart(sources);
+    buildQualityVsVolumeChart(sources);
+    buildQualityDistributionChart(sources);
+    buildTopQualityTable(sources);
+    buildProblematicSourcesTable(sources);
+  }
+
+  function buildQualityRatingChart(sources){
+    const top = sources.sort((a,b)=>b.qs-a.qs).slice(0,12);
+    
+    charts.qualityRating = new Chart(document.getElementById('chartQualityRating'),{
+      type:'bar',
+      data:{
+        labels:top.map(s=>s.name),
+        datasets:[{
+          label:'Quality Score %',
+          data:top.map(s=>s.qs),
+          backgroundColor:top.map(s=>{
+            if(s.qs>=15) return 'rgba(16,185,129,.85)';
+            if(s.qs>=10) return 'rgba(59,130,246,.85)';
+            if(s.qs>=5) return 'rgba(245,158,11,.85)';
+            return 'rgba(239,68,68,.85)';
+          }),
+          borderRadius:8
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            anchor:'end',
+            align:'right',
+            color:'#ffffff',
+            font:{weight:900,size:11},
+            formatter:(v)=>v.toFixed(1)+'%'
+          },
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            callbacks:{
+              label:(ctx)=> ` ${ctx.parsed.x.toFixed(1)}% (${ctx.chart.data.labels[ctx.dataIndex]})`
+            }
+          }
+        },
+        scales:{
+          x:{beginAtZero:true, grid:{color:'rgba(42,42,53,.5)'}, ticks:{color:'#a0a0b0',callback:(v)=>v+'%'}},
+          y:{grid:{display:false}, ticks:{color:'#ffffff',font:{weight:700,size:11}}}
+        }
+      }
+    });
+  }
+
+  function buildQualityVsVolumeChart(sources){
+    const data = sources
+      .filter(s=>s.total>=3)
+      .map(s=>({x:s.total, y:s.qs, label:s.name}))
+      .slice(0,20);
+
+    charts.qualityVsVolume = new Chart(document.getElementById('chartQualityVsVolume'),{
+      type:'scatter',
+      data:{
+        datasets:[{
+          label:'Источники',
+          data,
+          backgroundColor:data.map(d=>{
+            if(d.y>=15) return 'rgba(16,185,129,.7)';
+            if(d.y>=10) return 'rgba(59,130,246,.7)';
+            if(d.y>=5) return 'rgba(245,158,11,.7)';
+            return 'rgba(239,68,68,.7)';
+          }),
+          borderColor:data.map(d=>{
+            if(d.y>=15) return 'rgba(16,185,129,1)';
+            if(d.y>=10) return 'rgba(59,130,246,1)';
+            if(d.y>=5) return 'rgba(245,158,11,1)';
+            return 'rgba(239,68,68,1)';
+          }),
+          borderWidth:2,
+          pointRadius:6,
+          pointHoverRadius:8
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            callbacks:{
+              title:(items)=> items[0].raw.label,
+              label:(item)=> `Объем: ${item.parsed.x} | Quality: ${item.parsed.y.toFixed(1)}%`
+            }
+          }
+        },
+        scales:{
+          x:{
+            title:{display:true, text:'Объем обращений', color:'#a0a0b0'},
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0'}
+          },
+          y:{
+            title:{display:true, text:'Quality Score %', color:'#a0a0b0'},
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{color:'#a0a0b0',callback:(v)=>v+'%'}
+          }
+        }
+      }
+    });
+  }
+
+  function buildQualityDistributionChart(sources){
+    const dist = {
+      'Отлично (≥15%)': sources.filter(s=>s.qs>=15).length,
+      'Хорошо (10-15%)': sources.filter(s=>s.qs>=10 && s.qs<15).length,
+      'Средне (5-10%)': sources.filter(s=>s.qs>=5 && s.qs<10).length,
+      'Плохо (<5%)': sources.filter(s=>s.qs<5).length
+    };
+
+    charts.qualityDistribution = new Chart(document.getElementById('chartQualityDistribution'),{
+      type:'doughnut',
+      data:{
+        labels:Object.keys(dist),
+        datasets:[{
+          data:Object.values(dist),
+          backgroundColor:['rgba(16,185,129,.85)','rgba(59,130,246,.85)','rgba(245,158,11,.85)','rgba(239,68,68,.85)'],
+          borderWidth:0
+        }]
+      },
+      options: donutOptions()
+    });
+  }
+
+  function buildTopQualityTable(sources){
+    const top = sources.sort((a,b)=>b.qs-a.qs).slice(0,15);
+    
+    document.querySelector('#tableTopQuality tbody').innerHTML = top.map(s=>{
+      const catClass = s.qs>=15?'badge-green':s.qs>=10?'badge-blue':s.qs>=5?'badge-yellow':'badge-red';
+      const rating = s.qs>=15?'⭐⭐⭐⭐⭐':s.qs>=10?'⭐⭐⭐⭐':s.qs>=5?'⭐⭐⭐':'⭐⭐';
+      return `<tr>
+        <td><span class="badge badge-orange">${escapeHtml(s.name)}</span></td>
+        <td>${s.total}</td>
+        <td><b>${s.conf}</b></td>
+        <td><span class="badge ${catClass}">${s.qs.toFixed(1)}%</span></td>
+        <td><span class="badge ${catClass}">${s.category}</span></td>
+        <td>${rating}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function buildProblematicSourcesTable(sources){
+    const problematic = sources
+      .filter(s=>s.qs < 10 && s.total >= 5)
+      .sort((a,b)=>b.total - a.total)
+      .slice(0,15);
+    
+    document.querySelector('#tableProblematicSources tbody').innerHTML = problematic.map(s=>{
+      const losses = s.total - s.conf;
+      const recommendation = s.qs < 5 ? 'Проверить качество трафика' : 
+                           s.qs < 10 ? 'Оптимизировать посадочные' : 
+                           'Тестировать новые креативы';
+      return `<tr>
+        <td><span class="badge badge-red">${escapeHtml(s.name)}</span></td>
+        <td>${s.total}</td>
+        <td>${s.conf}</td>
+        <td><span class="badge badge-red">${s.qs.toFixed(1)}%</span></td>
+        <td><span class="badge badge-yellow">${losses}</span></td>
+        <td style="color:var(--text2);font-size:11px">${recommendation}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== SOURCES TAB ======
+  function updateSources(){
+    // sources compare
+    const mapS = {};
+    filteredLeads.forEach(r=>{
+      const s = r['utm_source'] || 'Не указано';
+      if(!mapS[s]) mapS[s]={leads:0,calls:0,conf:0};
+      mapS[s].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const s = r['Источник (utm)'] || 'Не указано';
+      if(!mapS[s]) mapS[s]={leads:0,calls:0,conf:0};
+      mapS[s].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') mapS[s].conf++;
+    });
+
+    const arr = Object.entries(mapS)
+      .sort((a,b)=>(b[1].leads+b[1].calls)-(a[1].leads+a[1].calls))
+      .slice(0,18);
+
+    charts.sourcesCompare = new Chart(document.getElementById('chartSourcesCompare'),{
+      type:'bar',
+      data:{
+        labels:arr.map(x=>x[0]),
+        datasets:[
+          {label:'Лиды', data:arr.map(x=>x[1].leads), backgroundColor:'rgba(59,130,246,.85)', borderRadius:8, borderWidth:0},
+          {label:'Звонки', data:arr.map(x=>x[1].calls), backgroundColor:'rgba(16,185,129,.85)', borderRadius:8, borderWidth:0},
+          {label:'Подтверж.', data:arr.map(x=>x[1].conf), backgroundColor:'rgba(236,72,153,.85)', borderRadius:8, borderWidth:0},
+        ]
+      },
+      options:{
+        ...barOptions(true),
+        plugins:{
+          ...barOptions(true).plugins,
+          legend:{display:true, position:'top', labels:{boxWidth:14, padding:12, font:{size:13,weight:900}, color:'#ffffff'}},
+          title:{
+            display:true,
+            text:'ТОП источников по эффективности',
+            color:'#ffffff',
+            font:{size:14,weight:900},
+            padding:{bottom:20}
+          }
+        },
+        scales:{
+          x:{
+            grid:{display:false},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0',
+              maxRotation:45,
+              minRotation:30
+            }
+          },
+          y:{
+            beginAtZero:true,
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0'
+            }
+          }
+        }
+      }
+    });
+
+    // medium compare
+    const mapM = {};
+    filteredLeads.forEach(r=>{
+      const m = r['utm_medium'] || 'Не указано';
+      if(!mapM[m]) mapM[m]={leads:0,calls:0,conf:0};
+      mapM[m].leads++;
+    });
+    filteredCalls.forEach(r=>{
+      const m = r['Канал'] || 'Не указано';
+      if(!mapM[m]) mapM[m]={leads:0,calls:0,conf:0};
+      mapM[m].calls++;
+      if((r['Подтвержденный лид']||'')==='Да') mapM[m].conf++;
+    });
+    const arrM = Object.entries(mapM)
+      .sort((a,b)=>(b[1].leads+b[1].calls)-(a[1].leads+a[1].calls))
+      .slice(0,16);
+
+    charts.mediumCompare = new Chart(document.getElementById('chartMediumCompare'),{
+      type:'bar',
+      data:{
+        labels:arrM.map(x=>x[0]),
+        datasets:[
+          {label:'Лиды', data:arrM.map(x=>x[1].leads), backgroundColor:'rgba(59,130,246,.85)', borderRadius:8, borderWidth:0},
+          {label:'Звонки', data:arrM.map(x=>x[1].calls), backgroundColor:'rgba(16,185,129,.85)', borderRadius:8, borderWidth:0},
+          {label:'Подтверж.', data:arrM.map(x=>x[1].conf), backgroundColor:'rgba(236,72,153,.85)', borderRadius:8, borderWidth:0},
+        ]
+      },
+      options:{
+        ...barOptions(true),
+        plugins:{
+          ...barOptions(true).plugins,
+          legend:{display:true, position:'top', labels:{boxWidth:14, padding:12, font:{size:13,weight:900}, color:'#ffffff'}},
+          title:{
+            display:true,
+            text:'ТОП каналов по результатам',
+            color:'#ffffff',
+            font:{size:14,weight:900},
+            padding:{bottom:20}
+          }
+        },
+        scales:{
+          x:{
+            grid:{display:false},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0',
+              maxRotation:45,
+              minRotation:30
+            }
+          },
+          y:{
+            beginAtZero:true,
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0'
+            }
+          }
+        }
+      }
+    });
+
+    // full table
+    const full = Object.entries(mapS)
+      .sort((a,b)=>(b[1].leads+b[1].calls)-(a[1].leads+a[1].calls))
+      .slice(0,40);
+
+    const totalAll = filteredLeads.length + filteredCalls.length;
+    const maxAll = full[0] ? (full[0][1].leads + full[0][1].calls) : 1;
+
+    document.querySelector('#tableSourcesFull tbody').innerHTML = full.map(([name,d])=>{
+      const all = d.leads + d.calls;
+      const share = totalAll>0 ? (all/totalAll*100).toFixed(1) : '0.0';
+      const confRate = d.calls>0 ? (d.conf/d.calls*100).toFixed(1)+'%' : '—';
+      return `<tr>
+        <td><span class="badge badge-blue">${escapeHtml(name)}</span></td>
+        <td>${d.leads}</td>
+        <td>${d.calls}</td>
+        <td><b>${d.conf}</b></td>
+        <td><b>${all}</b></td>
+        <td>${confRate}</td>
+        <td>
+          <div class="progress-bar"><div class="progress-fill" style="width:${(all/maxAll*100).toFixed(1)}%;background:var(--accent2)"></div></div>
+          <div style="margin-top:6px;color:var(--text3);font-size:12px;font-weight:800">${share}%</div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ====== MOM COMPARE ======
+  function buildMoM(){
+    // build by "month key" from dates in filtered data (or raw data?) — use RAW for proper MoM regardless of filters? better: filtered so user can MoM on segment
+    const leads = filteredLeads;
+    const calls = filteredCalls;
+
+    // month key: YYYY-MM
+    const monthLeads = {};
+    leads.forEach(r=>{
+      const d = (r['sent']||'').split(' ')[0];
+      if(!d) return;
+      const m = d.slice(0,7);
+      if(!monthLeads[m]) monthLeads[m]=[];
+      monthLeads[m].push(r);
+    });
+    const monthCalls = {};
+    calls.forEach(r=>{
+      const d = parseCallDateISO(r['Время']||'');
+      if(!d) return;
+      const m = d.slice(0,7);
+      if(!monthCalls[m]) monthCalls[m]=[];
+      monthCalls[m].push(r);
+    });
+
+    const months = Array.from(new Set([...Object.keys(monthLeads), ...Object.keys(monthCalls)])).sort();
+    if(months.length < 2){
+      // not enough
+      renderMoMEmpty();
+      return;
+    }
+
+    const last = months[months.length-1];
+    const prev = months[months.length-2];
+
+    const map = {}; // medium => {cur:{leads,calls,conf}, prev:{...}}
+    function ensure(k){
+      if(!map[k]) map[k]={cur:{leads:0,calls:0,conf:0}, prev:{leads:0,calls:0,conf:0}};
+      return map[k];
+    }
+
+    (monthLeads[last]||[]).forEach(r=>{
+      const m = r['utm_medium'] || 'Не указано';
+      ensure(m).cur.leads++;
+    });
+    (monthLeads[prev]||[]).forEach(r=>{
+      const m = r['utm_medium'] || 'Не указано';
+      ensure(m).prev.leads++;
+    });
+
+    (monthCalls[last]||[]).forEach(r=>{
+      const m = r['Канал'] || 'Не указано';
+      ensure(m).cur.calls++;
+      if((r['Подтвержденный лид']||'')==='Да') ensure(m).cur.conf++;
+    });
+    (monthCalls[prev]||[]).forEach(r=>{
+      const m = r['Канал'] || 'Не указано';
+      ensure(m).prev.calls++;
+      if((r['Подтвержденный лид']||'')==='Да') ensure(m).prev.conf++;
+    });
+
+    const rows = Object.entries(map).map(([k,v])=>{
+      return {
+        medium:k,
+        cur:v.cur, prev:v.prev,
+        dLeads: deltaPct(v.cur.leads, v.prev.leads),
+        dCalls: deltaPct(v.cur.calls, v.prev.calls),
+        dConf:  deltaPct(v.cur.conf, v.prev.conf)
+      };
+    });
+
+    // sort by absolute change on calls + leads weight
+    rows.sort((a,b)=>{
+      const scoreA = Math.abs(a.dCalls||0)*1.2 + Math.abs(a.dLeads||0)*0.8 + Math.abs(a.dConf||0)*1.5;
+      const scoreB = Math.abs(b.dCalls||0)*1.2 + Math.abs(b.dLeads||0)*0.8 + Math.abs(b.dConf||0)*1.5;
+      return scoreB - scoreA;
+    });
+
+    // chart: show top 12 mediums by call delta
+    const top = rows.slice(0,12);
+    const labels = top.map(r=>r.medium);
+    const dCalls = top.map(r=>r.dCalls ?? 0);
+    const dLeads = top.map(r=>r.dLeads ?? 0);
+    const dConf  = top.map(r=>r.dConf ?? 0);
+
+    charts.mom = new Chart(document.getElementById('chartMoM'),{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[
+          {label:'Δ звонки %', data:dCalls, backgroundColor:'rgba(16,185,129,.85)', borderRadius:8, borderWidth:0},
+          {label:'Δ лиды %', data:dLeads, backgroundColor:'rgba(59,130,246,.85)', borderRadius:8, borderWidth:0},
+          {label:'Δ подтв. %', data:dConf, backgroundColor:'rgba(236,72,153,.85)', borderRadius:8, borderWidth:0}
+        ]
+      },
+      options:{
+        ...barOptions(true),
+        plugins:{
+          ...barOptions(true).plugins,
+          legend:{display:true, position:'top', labels:{boxWidth:14, padding:12, font:{size:13,weight:900}, color:'#ffffff'}},
+          title:{
+            display:true,
+            text:'MoM: Изменение по месяцам (Month-over-Month)',
+            color:'#ffffff',
+            font:{size:14,weight:900},
+            padding:{bottom:20}
+          },
+          tooltip:{
+            backgroundColor:'rgba(18,18,26,.95)',
+            titleColor:'#ffffff',
+            bodyColor:'#a0a0b0',
+            borderColor:'#2a2a35',
+            borderWidth:1,
+            padding:12,
+            callbacks:{
+              label:(ctx)=> ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+            }
+          }
+        },
+        scales:{
+          x:{
+            grid:{display:false},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0',
+              maxRotation:45,
+              minRotation:30
+            }
+          },
+          y:{
+            beginAtZero:true,
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{
+              font:{size:11,weight:700},
+              color:'#a0a0b0',
+              callback:(v)=>v+'%'
+            }
+          }
+        }
+      }
+    });
+
+    // table
+    document.querySelector('#tableMoM tbody').innerHTML = rows.slice(0,30).map(r=>{
+      return `<tr>
+        <td><span class="badge badge-orange">${escapeHtml(r.medium)}</span></td>
+
+        <td>${r.cur.leads} / ${r.prev.leads}</td>
+        <td>${formatDeltaCell(r.dLeads)}</td>
+
+        <td>${r.cur.calls} / ${r.prev.calls}</td>
+        <td>${formatDeltaCell(r.dCalls)}</td>
+
+        <td>${r.cur.conf} / ${r.prev.conf}</td>
+        <td>${formatDeltaCell(r.dConf)}</td>
+      </tr>`;
+    }).join('');
+
+    // small note in header (optional)
+    // console.log('MoM months:', prev, '→', last);
+  }
+
+  function renderMoMEmpty(){
+    destroyCharts(['mom']);
+    const ctx = document.getElementById('chartMoM').getContext('2d');
+    // simple empty
+    charts.mom = new Chart(ctx,{
+      type:'bar',
+      data:{labels:['Недостаточно данных'], datasets:[{data:[0], backgroundColor:'rgba(160,160,176,.25)', borderRadius:10}]},
+      options: barOptions(false)
+    });
+    document.querySelector('#tableMoM tbody').innerHTML = `<tr><td colspan="7" style="color:var(--text3);font-weight:800">
+      Недостаточно данных для MoM. Нужно минимум 2 разных месяца в текущей выборке.
+    </td></tr>`;
+  }
+
+  // ====== EXPORT ======
+  function exportData(){
+    const rows = [];
+
+    filteredLeads.forEach(r=>{
+      rows.push({
+        type:'Заявка',
+        date:r['sent']||'',
+        source:r['utm_source']||'',
+        medium:r['utm_medium']||'',
+        campaign:r['utm_campaign']||'',
+        content:r['utm_content']||'',
+        term:r['utm_term']||'',
+        place:r['evgenich_place']||'',
+        device:r['device_type']||'',
+        qty:r['Quantity']||'',
+        phone:r['Phone']||''
+      });
+    });
+
+    filteredCalls.forEach(r=>{
+      rows.push({
+        type:'Звонок',
+        date:r['Время']||'',
+        source:r['Источник (utm)']||'',
+        medium:r['Канал']||'',
+        campaign:r['Кампания']||'',
+        content:r['Контент']||'',
+        term:r['Ключевое слово']||'',
+        place_guess:guessCallPlace(r),
+        region:r['Регион']||'',
+        duration:r['Длительность']||'',
+        unique:r['Уникальное']||'',
+        quality:r['Качественное']||'',
+        confirmed:r['Подтвержденный лид']||'',
+        phone:r['Номер клиента']||''
+      });
+    });
+
+    const headers = Object.keys(rows[0]||{});
+    const csv = [
+      headers.join(','),
+      ...rows.map(o=>headers.map(h=> `"${String(o[h]??'').replaceAll('"','""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'evgenich_dashboard_export_'+new Date().toISOString().slice(0,10)+'.csv';
+    link.click();
+  }
+
+  // ====== HELPERS ======
+  function destroyCharts(keys){
+    keys.forEach(k=>{
+      if(charts[k]){
+        charts[k].destroy();
+        charts[k]=null;
+      }
+    });
+  }
+
+  function baseLineOptions(){
+    return {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          display:true,
+          position:'top',
+          labels:{
+            boxWidth:14,
+            padding:12,
+            font:{size:13,weight:900},
+            color:'#ffffff'
+          }
+        },
+        datalabels:{display:false},
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          backgroundColor:'rgba(18,18,26,.95)',
+          titleColor:'#ffffff',
+          bodyColor:'#a0a0b0',
+          borderColor:'#2a2a35',
+          borderWidth:1,
+          padding:12,
+          titleFont:{size:13,weight:900},
+          bodyFont:{size:12,weight:600}
+        }
+      },
+      interaction:{mode:'index', intersect:false},
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{
+            maxTicksLimit:14,
+            font:{size:11,weight:700},
+            color:'#a0a0b0'
+          }
+        },
+        y:{
+          beginAtZero:true,
+          grid:{color:'rgba(42,42,53,.5)'},
+          ticks:{
+            font:{size:11,weight:700},
+            color:'#a0a0b0'
+          }
+        }
+      }
+    };
+  }
+
+  function barOptions(showLegend){
+    return {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          display:!!showLegend,
+          position:'top',
+          labels:{
+            boxWidth:14,
+            padding:12,
+            font:{size:13,weight:900},
+            color:'#ffffff'
+          }
+        },
+        datalabels:{
+          anchor:'end',
+          align:'top',
+          color:'#ffffff',
+          font:{size:11,weight:900},
+          formatter:(v)=> v>0 ? v : '',
+          borderRadius:4,
+          padding:{top:2,bottom:2,left:4,right:4}
+        },
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          backgroundColor:'rgba(18,18,26,.95)',
+          titleColor:'#ffffff',
+          bodyColor:'#a0a0b0',
+          borderColor:'#2a2a35',
+          borderWidth:1,
+          padding:12,
+          titleFont:{size:13,weight:900},
+          bodyFont:{size:12,weight:600}
+        }
+      },
+      interaction:{mode:'index', intersect:false},
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{
+            font:{size:12,weight:700},
+            color:'#a0a0b0',
+            maxRotation:45,
+            minRotation:0
+          }
+        },
+        y:{
+          beginAtZero:true,
+          grid:{color:'rgba(42,42,53,.5)'},
+          ticks:{
+            font:{size:12,weight:700},
+            color:'#a0a0b0'
+          }
+        }
+      }
+    };
+  }
+
+  function donutOptions(){
+    return {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:'right',
+          labels:{
+            boxWidth:14,
+            padding:12,
+            font:{size:12,weight:900},
+            color:'#ffffff'
+          }
+        },
+        datalabels:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(18,18,26,.95)',
+          titleColor:'#ffffff',
+          bodyColor:'#a0a0b0',
+          borderColor:'#2a2a35',
+          borderWidth:1,
+          padding:12,
+          titleFont:{size:13,weight:900},
+          bodyFont:{size:12,weight:600}
+        }
+      },
+      cutout:'60%'
+    };
+  }
+
+  function parseCallDateISO(str){
+    // input: DD.MM.YYYY HH:mm
+    if(!str) return '';
+    const part = String(str).split(' ')[0] || '';
+    const p = part.split('.');
+    if(p.length!==3) return '';
+    const dd = p[0].padStart(2,'0');
+    const mm = p[1].padStart(2,'0');
+    const yy = p[2];
+    return `${yy}-${mm}-${dd}`;
+  }
+
+  function parseCallDateTime(str){
+    // returns Date object or null
+    if(!str) return null;
+    const [dpart, tpart] = String(str).split(' ');
+    if(!dpart || !tpart) return null;
+    const p = dpart.split('.');
+    if(p.length!==3) return null;
+    const [dd,mm,yy] = p.map(x=>parseInt(x,10));
+    const [hh,mi] = tpart.split(':').map(x=>parseInt(x,10));
+    if([dd,mm,yy,hh,mi].some(x=>Number.isNaN(x))) return null;
+    return new Date(yy, mm-1, dd, hh, mi, 0);
+  }
+
+  function weekdayIndexMon0(date){
+    // JS: 0=Sun..6=Sat -> we want Mon=0..Sun=6
+    const d = date.getDay(); // 0=Sun
+    return (d===0) ? 6 : d-1;
+  }
+
+  function fmtInt(n){ 
+    const num = Number(n)||0;
+    return num.toLocaleString('ru-RU', {maximumFractionDigits: 0}); 
+  }
+  function pct(cur, prev){ return Number((((cur - prev)/prev)*100).toFixed(0)); }
+  function deltaPct(cur, prev){
+    if(prev===0 && cur===0) return 0;
+    if(prev===0 && cur>0) return 999; // “explosion”
+    return ((cur-prev)/prev*100);
+  }
+  function formatDeltaCell(v){
+    if(v===null || v===undefined) return '<span style="color:var(--text3)">—</span>';
+    if(v===999) return `<span class="badge badge-green" style="font-weight:900">↗ ∞</span>`;
+    const cls = v>0 ? 'badge-green' : v<0 ? 'badge-red' : 'badge-blue';
+    const sign = v>0 ? '↗ +' : v<0 ? '↘ ' : '→ ';
+    return `<span class="badge ${cls}" style="font-weight:900">${sign}${Math.abs(v).toFixed(1)}%</span>`;
+  }
+
+  function shorten(s,n){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+  function escapeHtml(s){
+    return String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+  }
+
+  function guessCallPlace(r) {
+  const url     = String(r['URL входа']   || '').toLowerCase();
+  const camp    = String(r['Кампания']     || '').toLowerCase();
+  const content = String(r['Контент']      || '').toLowerCase();
+  const theme   = String(r['Тема']         || '').toLowerCase();
+
+  // ищем маркеры «Рубинштейна»
+  const hasRub = /(rubinshteina|rubin|rub|руб)/.test(url) ||
+                 /(rubinshteina|rubin|rub|руб)/.test(camp) ||
+                 /(rubinshteina|rubin|rub|руб)/.test(content) ||
+                 /(rubinshteina|rubin|rub|руб)/.test(theme);
+
+  // ищем маркеры «Невский»
+  const hasNev = /(newskiy|nevsky|nev|нев)/.test(url) ||
+                 /(newskiy|nevsky|nev|нев)/.test(camp) ||
+                 /(newskiy|nevsky|nev|нев)/.test(content) ||
+                 /(newskiy|nevsky|nev|нев)/.test(theme);
+
+  if (hasRub && !hasNev) return 'Рубинштейна';
+  if (hasNev && !hasRub) return 'Невский';
+
+  // если оба маркера найдены, то при явном упоминании 'rubinshteina' выбираем Рубинштейна
+  if (hasRub && hasNev) {
+    if (/rubinshteina/.test(url) || /rubinshteina/.test(camp) || /rubinshteina/.test(content) || /rubinshteina/.test(theme)) {
+      return 'Рубинштейна';
+    }
+    return 'Невский';
+  }
+  return 'Не определено';
+}
+
+
+  // ====== TOOLTIP SYSTEM ======
+  function initTooltips(){
+    const bubble = document.getElementById('tooltipBubble');
+    const ttTitle = document.getElementById('ttTitle');
+    const ttText = document.getElementById('ttText');
+
+    const show = (el, x, y)=>{
+      ttTitle.textContent = el.getAttribute('data-tt-title') || 'Пояснение';
+      ttText.textContent  = el.getAttribute('data-tt-text')  || '';
+      bubble.style.display='block';
+
+      const pad=12;
+      const bw = bubble.offsetWidth;
+      const bh = bubble.offsetHeight;
+
+      let left = x + pad;
+      let top  = y + pad;
+
+      if(left + bw > window.innerWidth - 10) left = window.innerWidth - bw - 10;
+      if(top  + bh > window.innerHeight - 10) top = y - bh - pad;
+
+      bubble.style.left = left+'px';
+      bubble.style.top  = top+'px';
+    };
+
+    const hide = ()=> bubble.style.display='none';
+
+    document.addEventListener('mouseover', (e)=>{
+      const el = e.target.closest('.info-icon[data-tt-text]');
+      if(!el) return;
+      const r = el.getBoundingClientRect();
+      show(el, r.right, r.top);
+    });
+
+    document.addEventListener('mouseout', (e)=>{
+      if(e.target.closest('.info-icon')) hide();
+    });
+
+    document.addEventListener('click', (e)=>{
+      const el = e.target.closest('.info-icon[data-tt-text]');
+      if(!el){ hide(); return; }
+      const r = el.getBoundingClientRect();
+      show(el, r.right, r.top);
+    });
+
+    window.addEventListener('scroll', hide, {passive:true});
+    window.addEventListener('resize', hide);
+  }
+</script>
+</body>
+</html>
