@@ -2180,8 +2180,8 @@
     const matchesLocation = (place) => {
       if (filters.location === 'all') return true;
       const p = (place || '').toLowerCase();
-      if (filters.location === 'nevsky') return p.includes('невск') || p.includes('nevsk');
-      if (filters.location === 'rubinshteyna') return p.includes('рубинштейн') || p.includes('rubinst');
+      if (filters.location === 'nevsky') return p.includes('невск') || p.includes('newskiy') || p.includes('nevsk');
+      if (filters.location === 'rubinshteyna') return p.includes('рубинштейн') || p.includes('rubinshteina');
       return true;
     };
 
@@ -2219,8 +2219,8 @@
       const campaign = (r['Кампания'] || '').toLowerCase();
       const content = (r['Контент'] || '').toLowerCase();
       const combined = campaign + ' ' + content;
-      if (filters.location === 'nevsky' && !combined.includes('невск') && !combined.includes('nevsk')) return false;
-      if (filters.location === 'rubinshteyna' && !combined.includes('рубинштейн') && !combined.includes('rubinst')) return false;
+      if (filters.location === 'nevsky' && !combined.includes('невск') && !combined.includes('newskiy')) return false;
+      if (filters.location === 'rubinshteyna' && !combined.includes('рубинштейн') && !combined.includes('rubinshteina')) return false;
 
       if(selectedSources.length && !selectedSources.includes(s)) return false;
       if(selectedMediums.length && !selectedMediums.includes(m)) return false;
