@@ -2692,7 +2692,7 @@
     charts.sourcesFunnel = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels,
+        labels: labels.map(l => l.length > 15 ? l.slice(0,15) + '...' : l),
         datasets: [
           { label: 'Звонки', data: callsData, backgroundColor: 'rgba(255,107,53,.7)', borderRadius: 4 },
           { label: 'Уникальные', data: uniqueData, backgroundColor: 'rgba(245,158,11,.7)', borderRadius: 4 },
@@ -2701,10 +2701,25 @@
         ]
       },
       options: {
-        ...barOptions(true),
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 20, right: 15, bottom: 10, left: 10 } },
+        clip: false,
         plugins: {
-          ...barOptions(true).plugins,
-          legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { weight: 700 }, color: '#a0a0b0' } }
+          legend: { display: true, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11, weight: 700 }, color: '#a0a0b0' } },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            offset: 2,
+            color: '#fff',
+            font: { size: 9, weight: 900 },
+            formatter: v => v > 0 ? v : ''
+          },
+          tooltip: barOptions(true).plugins.tooltip
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10, weight: 700 }, color: '#a0a0b0', maxRotation: 45 } },
+          y: { beginAtZero: true, grace: '15%', grid: { color: 'rgba(42,42,53,.5)' }, ticks: { font: { size: 11 }, color: '#a0a0b0' } }
         }
       }
     });
@@ -2839,7 +2854,7 @@
     charts.topCampaignsLeads = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: data.map(d => d.campaign.length > 30 ? d.campaign.slice(0, 30) + '...' : d.campaign),
+        labels: data.map(d => d.campaign.length > 25 ? d.campaign.slice(0, 25) + '...' : d.campaign),
         datasets: [{
           label: 'Лиды',
           data: data.map(d => d.leads),
@@ -2849,8 +2864,26 @@
       },
       options: {
         indexAxis: 'y',
-        ...barOptions(false),
-        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 10, right: 50, bottom: 10, left: 10 } },
+        clip: false,
+        plugins: { 
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'right',
+            offset: 4,
+            color: '#fff',
+            font: { size: 11, weight: 900 },
+            formatter: v => v > 0 ? v : ''
+          },
+          tooltip: barOptions(false).plugins.tooltip
+        },
+        scales: {
+          x: { beginAtZero: true, grace: '10%', grid: { color: 'rgba(42,42,53,.5)' }, ticks: { font: { size: 11 }, color: '#a0a0b0' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11, weight: 700 }, color: '#a0a0b0' } }
+        }
       }
     });
   }
@@ -2862,7 +2895,7 @@
     charts.topCampaignsCalls = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: data.map(d => d.campaign.length > 30 ? d.campaign.slice(0, 30) + '...' : d.campaign),
+        labels: data.map(d => d.campaign.length > 25 ? d.campaign.slice(0, 25) + '...' : d.campaign),
         datasets: [{
           label: 'Звонки',
           data: data.map(d => d.calls),
@@ -2872,8 +2905,26 @@
       },
       options: {
         indexAxis: 'y',
-        ...barOptions(false),
-        plugins: { ...barOptions(false).plugins, legend: { display: false } }
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 10, right: 50, bottom: 10, left: 10 } },
+        clip: false,
+        plugins: { 
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'right',
+            offset: 4,
+            color: '#fff',
+            font: { size: 11, weight: 900 },
+            formatter: v => v > 0 ? v : ''
+          },
+          tooltip: barOptions(false).plugins.tooltip
+        },
+        scales: {
+          x: { beginAtZero: true, grace: '10%', grid: { color: 'rgba(42,42,53,.5)' }, ticks: { font: { size: 11 }, color: '#a0a0b0' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11, weight: 700 }, color: '#a0a0b0' } }
+        }
       }
     });
   }
@@ -2903,9 +2954,26 @@
       },
       options: {
         indexAxis: 'y',
-        ...barOptions(false),
-        plugins: { ...barOptions(false).plugins, legend: { display: false } },
-        scales: { x: { max: 100, grid: { color: '#2a2a35' }, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } }
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 10, right: 45, bottom: 10, left: 10 } },
+        clip: false,
+        plugins: { 
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'right',
+            offset: 4,
+            color: '#fff',
+            font: { size: 11, weight: 900 },
+            formatter: v => v + '%'
+          },
+          tooltip: barOptions(false).plugins.tooltip
+        },
+        scales: { 
+          x: { max: 100, grid: { color: '#2a2a35' }, ticks: { callback: v => v + '%', font: { size: 11 }, color: '#a0a0b0' } }, 
+          y: { grid: { display: false }, ticks: { font: { size: 11, weight: 700 }, color: '#a0a0b0' } } 
+        }
       }
     });
   }
@@ -3100,7 +3168,16 @@
           {label:'Звонки', data:callsData, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.10)', fill:true, tension:.35, pointRadius:2}
         ]
       },
-      options: baseLineOptions()
+      options: {
+        ...baseLineOptions(),
+        scales: {
+          ...baseLineOptions().scales,
+          y: {
+            ...baseLineOptions().scales.y,
+            grace: '10%'
+          }
+        }
+      }
     });
   }
 
@@ -3141,13 +3218,16 @@
         indexAxis:'y',
         responsive:true,
         maintainAspectRatio:false,
+        layout: { padding: { top: 10, right: 80, bottom: 10, left: 10 } },
+        clip: false,
         plugins:{
           legend:{display:false},
           datalabels:{
             anchor:'end',
             align:'right',
+            offset: 6,
             color:'#fff',
-            font:{weight:900},
+            font:{size:11, weight:900},
             formatter:(v,ctx)=>{
               const i = ctx.dataIndex;
               const prev = i===0 ? null : data[i-1];
@@ -3167,8 +3247,8 @@
           }
         },
         scales:{
-          x:{beginAtZero:true, grid:{color:'#2a2a35'}},
-          y:{grid:{display:false}, ticks:{color:'#a0a0b0', font:{weight:900}}}
+          x:{beginAtZero:true, grace:'5%', grid:{color:'#2a2a35'}, ticks:{font:{size:11}, color:'#a0a0b0'}},
+          y:{grid:{display:false}, ticks:{color:'#a0a0b0', font:{size:11, weight:900}}}
         }
       }
     });
@@ -3311,16 +3391,39 @@
         ]
       },
       options:{
-        ...barOptions(true),
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 10, right: 20, bottom: 10, left: 10 } },
+        clip: false,
         plugins:{
-          ...barOptions(true).plugins,
           legend:{display:true, position:'top', labels:{boxWidth:14, padding:12, font:{size:13,weight:900}, color:'#ffffff'}},
+          datalabels:{
+            anchor:'end',
+            align:'top',
+            offset: 2,
+            color:'#ffffff',
+            font:{size:9,weight:900},
+            formatter:(v)=> v>0 ? v : ''
+          },
           title:{
             display:true,
             text:'ТОП-12 источников трафика',
             color:'#ffffff',
             font:{size:14,weight:900},
             padding:{bottom:20}
+          },
+          tooltip: barOptions(true).plugins.tooltip
+        },
+        scales:{
+          x:{
+            grid:{display:false},
+            ticks:{ font:{size:10,weight:700}, color:'#a0a0b0', maxRotation:45 }
+          },
+          y:{
+            beginAtZero:true,
+            grace:'15%',
+            grid:{color:'rgba(42,42,53,.5)'},
+            ticks:{ font:{size:11,weight:700}, color:'#a0a0b0' }
           }
         }
       }
@@ -4753,6 +4856,9 @@
     return {
       responsive:true,
       maintainAspectRatio:false,
+      layout:{
+        padding:{top:20, right:20, bottom:10, left:10}
+      },
       plugins:{
         legend:{
           display:true,
@@ -4790,6 +4896,7 @@
         },
         y:{
           beginAtZero:true,
+          grace:'10%',
           grid:{color:'rgba(42,42,53,.5)'},
           ticks:{
             font:{size:11,weight:700},
@@ -4804,6 +4911,10 @@
     return {
       responsive:true,
       maintainAspectRatio:false,
+      layout:{
+        padding:{top:25, right:15, bottom:10, left:10}
+      },
+      clip:false,
       plugins:{
         legend:{
           display:!!showLegend,
@@ -4818,8 +4929,10 @@
         datalabels:{
           anchor:'end',
           align:'top',
+          offset:4,
+          clamp:true,
           color:'#ffffff',
-          font:{size:11,weight:900},
+          font:{size:10,weight:900},
           formatter:(v)=> v>0 ? v : '',
           borderRadius:4,
           padding:{top:2,bottom:2,left:4,right:4}
@@ -4842,7 +4955,7 @@
         x:{
           grid:{display:false},
           ticks:{
-            font:{size:12,weight:700},
+            font:{size:11,weight:700},
             color:'#a0a0b0',
             maxRotation:45,
             minRotation:0
@@ -4850,9 +4963,10 @@
         },
         y:{
           beginAtZero:true,
+          grace:'15%',
           grid:{color:'rgba(42,42,53,.5)'},
           ticks:{
-            font:{size:12,weight:700},
+            font:{size:11,weight:700},
             color:'#a0a0b0'
           }
         }
@@ -4864,6 +4978,9 @@
     return {
       responsive:true,
       maintainAspectRatio:false,
+      layout:{
+        padding:{top:10, right:10, bottom:10, left:10}
+      },
       plugins:{
         legend:{
           position:'right',
