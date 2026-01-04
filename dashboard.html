@@ -200,6 +200,58 @@
     .compare-dates.visible{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
 
     /* Month calendar picker */
+    /* Location Quick Filter */
+    .location-quick-filter{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px 16px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    .location-filter-title{
+      font-size:13px;
+      font-weight:800;
+      color:var(--text2);
+    }
+    .location-btns{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .location-btn{
+      padding:8px 16px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--bg);
+      color:var(--text2);
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+      transition:all .2s;
+    }
+    .location-btn:hover{
+      border-color:var(--purple);
+      color:var(--text);
+      background:rgba(139,92,246,.1);
+    }
+    .location-btn.active{
+      background:linear-gradient(135deg, var(--purple) 0%, rgba(139,92,246,.8) 100%);
+      border-color:var(--purple);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(139,92,246,.4);
+    }
+
+    .month-picker-section{
+      background:var(--bg);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:14px;
+    }
     .month-picker{
       background:var(--bg-card);
       border:1px solid var(--border);
@@ -685,43 +737,51 @@
       </div>
     </div>
 
-    <!-- filters -->
-    <div class="filters">
-    <!-- Month Calendar Picker -->
-    <div class="month-picker">
-      <div class="month-picker-header">
-        <div class="month-picker-title">
-          📅 Выбор по месяцам
-          <span style="font-weight:500;font-size:11px;color:var(--text3)">(кликните для выбора диапазона)</span>
-        </div>
-        <div class="month-picker-nav">
-          <button onclick="changePickerYear(-1)">◀</button>
-          <span class="month-picker-year" id="pickerYear">2025</span>
-          <button onclick="changePickerYear(1)">▶</button>
-        </div>
-      </div>
-      <div class="months-grid" id="monthsGrid"></div>
-      <div class="month-picker-actions">
-        <button class="quick-range-btn" onclick="selectMonthRange('q1')">Q1 (Янв-Мар)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('q2')">Q2 (Апр-Июн)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('q3')">Q3 (Июл-Сен)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('q4')">Q4 (Окт-Дек)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('h1')">H1 (1-е полугодие)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('h2')">H2 (2-е полугодие)</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('year')">Весь год</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('last3')">Последние 3 мес</button>
-        <button class="quick-range-btn" onclick="selectMonthRange('last6')">Последние 6 мес</button>
+    <!-- Quick Location Filter -->
+    <div class="location-quick-filter">
+      <div class="location-filter-title">📍 Локация:</div>
+      <div class="location-btns">
+        <button class="location-btn active" data-location="all">Все</button>
+        <button class="location-btn" data-location="nevsky">🏛️ Невский</button>
+        <button class="location-btn" data-location="rubinshteyna">🍷 Рубинштейна</button>
       </div>
     </div>
 
     <!-- filters -->
     <div class="filters">
       <div class="filters-header">
-        <div class="filters-title">Фильтры</div>
-        <div class="filters-toggle" id="filtersToggle">Показать фильтры</div>
+        <div class="filters-title">🎛️ Расширенные фильтры</div>
+        <div class="filters-toggle" id="filtersToggle">Показать ▼</div>
       </div>
 
+      <!-- Collapsible content with month picker + other filters -->
       <div class="filters-content" id="filtersContent">
+        <!-- Month Calendar Picker -->
+        <div class="month-picker-section">
+          <div class="month-picker-header">
+            <div class="month-picker-title">
+              📅 Выбор по месяцам
+            </div>
+            <div class="month-picker-nav">
+              <button onclick="changePickerYear(-1)">◀</button>
+              <span class="month-picker-year" id="pickerYear">2025</span>
+              <button onclick="changePickerYear(1)">▶</button>
+            </div>
+          </div>
+          <div class="months-grid" id="monthsGrid"></div>
+          <div class="month-picker-actions">
+            <button class="quick-range-btn" onclick="selectMonthRange('q1')">Q1</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('q2')">Q2</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('q3')">Q3</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('q4')">Q4</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('h1')">H1</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('h2')">H2</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('year')">Год</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('last3')">3 мес</button>
+            <button class="quick-range-btn" onclick="selectMonthRange('last6')">6 мес</button>
+          </div>
+        </div>
+
         <div class="filters-grid">
           <div class="filter-section">
             <div class="filter-section-header">
@@ -1543,7 +1603,8 @@
   const WEEKDAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
   let filters = {
-    compareEnabled: false
+    compareEnabled: false,
+    location: 'all' // 'all', 'nevsky', 'rubinshteyna'
   };
 
   // ====== INIT ======
@@ -1740,7 +1801,17 @@
       const content = document.getElementById('filtersContent');
       const toggle = document.getElementById('filtersToggle');
       content.classList.toggle('visible');
-      toggle.textContent = content.classList.contains('visible') ? 'Скрыть фильтры' : 'Показать фильтры';
+      toggle.textContent = content.classList.contains('visible') ? 'Скрыть ▲' : 'Показать ▼';
+    });
+
+    // location quick filter
+    document.querySelectorAll('.location-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.location-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        filters.location = btn.dataset.location;
+        applyFilters();
+      });
     });
 
     // dates
@@ -2076,6 +2147,11 @@
     document.getElementById('compareToggle').classList.remove('active');
     document.getElementById('compareDates').classList.remove('visible');
 
+    // location filter reset
+    filters.location = 'all';
+    document.querySelectorAll('.location-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.location-btn[data-location="all"]').classList.add('active');
+
     applyFilters();
   }
 
@@ -2100,12 +2176,24 @@
 
     const callQuality = (document.querySelector('input[name="callQuality"]:checked')?.value || 'all');
 
+    // location filter helper
+    const matchesLocation = (place) => {
+      if (filters.location === 'all') return true;
+      const p = (place || '').toLowerCase();
+      if (filters.location === 'nevsky') return p.includes('невск') || p.includes('nevsk');
+      if (filters.location === 'rubinshteyna') return p.includes('рубинштейн') || p.includes('rubinst');
+      return true;
+    };
+
     // leads filter
     filteredLeads = includeLeads ? rawLeads.filter(r=>{
       const s = r['utm_source'] || 'Не указано';
       const m = r['utm_medium'] || 'Не указано';
       const p = r['evgenich_place'] || 'Не указано';
       const d = r['device_type'] || 'Не указано';
+
+      // location quick filter
+      if (!matchesLocation(p)) return false;
 
       if(selectedSources.length && !selectedSources.includes(s)) return false;
       if(selectedMediums.length && !selectedMediums.includes(m)) return false;
@@ -2126,6 +2214,13 @@
       const s = r['Источник (utm)'] || 'Не указано';
       const m = r['Канал'] || 'Не указано';
       const reg = r['Регион'] || 'Не указано';
+
+      // location filter for calls - check campaign/content for location keywords
+      const campaign = (r['Кампания'] || '').toLowerCase();
+      const content = (r['Контент'] || '').toLowerCase();
+      const combined = campaign + ' ' + content;
+      if (filters.location === 'nevsky' && !combined.includes('невск') && !combined.includes('nevsk')) return false;
+      if (filters.location === 'rubinshteyna' && !combined.includes('рубинштейн') && !combined.includes('rubinst')) return false;
 
       if(selectedSources.length && !selectedSources.includes(s)) return false;
       if(selectedMediums.length && !selectedMediums.includes(m)) return false;
